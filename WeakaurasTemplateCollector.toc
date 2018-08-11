@@ -1,0 +1,4 @@
+## Interface: 80000
+## Title: WeakaurasTemplateCollector
+## Dependencies: WeakAuras
+main.lua
