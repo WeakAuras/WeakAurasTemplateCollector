@@ -1,3 +1,5 @@
+local CreateFrame, UnitIsUnit, tinsert, sort, GetSpellBookItemName, GetSpellTabInfo, GetNumSpellTabs, GetSpellInfo, UnitAura, GetSpellCooldown, GetSpellCharges, GetSpellBaseCooldown = CreateFrame, UnitIsUnit, tinsert, sort, GetSpellBookItemName, GetSpellTabInfo, GetNumSpellTabs, GetSpellInfo, UnitAura, GetSpellCooldown, GetSpellCharges, GetSpellBaseCooldown
+
 local backdrop = {
 bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
 edgeFile = [[Interface\Tooltips\UI-Tooltip-Border]], edgeSize = 16,
@@ -14,10 +16,11 @@ frame:SetBackdropBorderColor(0.4, 0.4, 0.4)
 local scrollFrame = CreateFrame("ScrollFrame", "1ScrollFrame", frame, "UIPanelScrollFrameTemplate")
 scrollFrame:SetAllPoints();
 
-editBox = CreateFrame("EditBox", "1Edit", frame)
+local editBox = CreateFrame("EditBox", "1Edit", frame)
 editBox:SetFontObject(ChatFontNormal)
 editBox:SetMultiLine(true)
 editBox:SetAutoFocus(false);
+editBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 
 scrollFrame:SetScrollChild(editBox)
 
@@ -27,12 +30,13 @@ frame:SetHeight(715)
 editBox:SetWidth(500);
 
 --- OUTPUT
-spellsWithCd = {};
-playerBuffs = {};
-targetBuffs = {};
-petBuffs = {};
-targetDebuffs = {};
-spellIdsFromTalent = {};
+local spellsWithCd = {};
+local playerBuffs = {};
+local targetBuffs = {};
+local petBuffs = {};
+local targetDebuffs = {};
+local spellIdsFromTalent = {};
+local spellsWithCharge = {};
 
 ---
 
@@ -106,6 +110,9 @@ local function checkForCd(spellId)
       if (gatheringTalent) then
         spellIdsFromTalent[spellId] = true;
       end
+    end
+    if (charges and charges > 1) or (maxCharges and maxCharges > 1) then
+      spellsWithCharge[spellId] = true
     end
     spellsWithCd[spellId] = true;
   end
@@ -185,11 +192,11 @@ local function formatBuffs(input, type, unit)
   end
 
   local output = "";
-  for i, spellId in pairs(sorted) do
+  for _, spellId in pairs(sorted) do
     local withTalent = "";
     if (spellIdsFromTalent[spellId]) then
       withTalent = ", talent = 0 "
-    end  
+    end
     output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. "}, -- " .. GetSpellInfo(spellId) .. "\n";
   end
 
@@ -234,13 +241,28 @@ function export()
   "      title = L[\"Cooldowns\"],\n" ..
   "      args = {\n";
 
-  for i, spellId in ipairs(sortedCds) do
+  for _, spellId in ipairs(sortedCds) do
     local spellName = GetSpellInfo(spellId);
-    local withTalent = "";
-    if (spellIdsFromTalent[spellId]) then
-      withTalent = ", talent = 0 "
-    end  
-    cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. withTalent .. "}, -- ".. spellName .. "\n"
+    local parameters = "";
+    if spellIdsFromTalent[spellId] then
+      parameters = parameters .. ", talent = 0 "
+    end
+    if spellsWithCharge[spellId] then
+      parameters = parameters .. ", charges = true "
+    end
+    -- buff & debuff doesn't work if spellid is different like Death and Decay or Marrowrend
+    if playerBuffs[spellId] then
+      parameters = parameters .. ", buff = true "
+    end
+    if petBuffs[spellId] then
+      parameters = parameters .. ", buff = true, unit = 'pet' "
+    end
+    if targetBuffs[spellId] then
+      parameters = parameters .. ", debuff = true "
+    end
+    -- TODO handle if possible: requiresTarget, totem, overlayGlow, usable
+
+    cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. "}, -- ".. spellName .. "\n"
   end
 
   cooldowns = cooldowns ..
