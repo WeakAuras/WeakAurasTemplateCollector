@@ -273,3 +273,44 @@ function export()
   editBox:SetText(buffs .. debuffs .. cooldowns);
   frame:Show();
 end
+
+-- Encounter ids are saved in Prototypes.lua, WeakAuras.encounter_table
+-- key = encounterJournalID
+-- value = encounterID
+--
+-- Script to get encounterJournalID:
+
+--Alternative way to get them:
+--<https://wow.tools/dbc/?dbc=journalencounter.db2>
+--How to get encounterID:
+--<https://wow.tools/dbc/?dbc=dungeonencounter.db2>
+
+function WeakAuras.PrintEncounters()
+  local encounter_list = ""
+  EJ_SelectTier(EJ_GetNumTiers())
+  for _,inRaid in ipairs({false, true}) do
+     local instance_index = 1
+     local instance_id
+     local dungeon_name
+     local title = inRaid and "Raids" or "Dungeons"
+     encounter_list = ("%s|cffffd200%s|r\n"):format(encounter_list, title)
+     repeat
+        instance_id, dungeon_name = EJ_GetInstanceByIndex(instance_index, inRaid)
+        instance_index = instance_index + 1
+        if instance_id then
+           EJ_SelectInstance(instance_id)
+           local encounter_index = 1
+           encounter_list = ("%s|cffffd200%s|r\n"):format(encounter_list, dungeon_name)
+           repeat
+              local encounter_name,_, encounter_id = EJ_GetEncounterInfoByIndex(encounter_index)
+              encounter_index = encounter_index + 1
+              if encounter_id then
+                 encounter_list = ("%s%s: %d\n"):format(encounter_list, encounter_name, encounter_id)
+              end
+           until not encounter_id
+        end
+     until not instance_id
+     encounter_list = encounter_list .. "\n"
+  end
+  print(string.format("%s\n%s", encounter_list, "Supports multiple entries, separated by commas\n"))
+end
