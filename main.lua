@@ -7,7 +7,7 @@ insets = { left = 4, right = 3, top = 4, bottom = 3 }
 }
 
 
-local frame = CreateFrame("Frame", nil, UIParent)
+local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
 frame:SetBackdrop(backdrop)
 frame:SetBackdropColor(0, 0, 0)
 frame:SetBackdropBorderColor(0.4, 0.4, 0.4)
@@ -40,13 +40,44 @@ local spellsWithCharge = {};
 
 ---
 
-local gatheringTalent = false;
-
 local function PRINT(t)
   local text = editBox:GetText();
   text = text .. "\n" .. t;
   editBox:SetText(text);
 end
+
+local function gatherTalent()
+  local talentIndex = 1
+  local configId = C_ClassTalents.GetActiveConfigID()
+  if configId == nil then return end
+  local configInfo = C_Traits.GetConfigInfo(configId)
+  if configInfo == nil then return end
+  for _, treeId in ipairs(configInfo.treeIDs) do
+    local nodes = C_Traits.GetTreeNodes(treeId)
+    for _, nodeId in ipairs(nodes) do
+      local node = C_Traits.GetNodeInfo(configId, nodeId)
+      if node.ID ~= 0 then
+        for idx, talentId in ipairs(node.entryIDs) do
+          local entryInfo = C_Traits.GetEntryInfo(configId, talentId)
+          local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
+          local spellName = GetSpellInfo(definitionInfo.spellID)
+          if spellName then
+            spellIdsFromTalent[definitionInfo.spellID] = talentIndex
+            PRINT("Save talent: "..spellName)
+            talentIndex = talentIndex + 1
+          end
+        end
+      end
+    end
+  end
+end
+
+local spec_frame = CreateFrame("Frame")
+spec_frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+spec_frame:RegisterEvent("TRAIT_CONFIG_CREATED")
+spec_frame:RegisterEvent("TRAIT_CONFIG_UPDATED")
+spec_frame:RegisterEvent("PLAYER_TALENT_UPDATE")
+spec_frame:SetScript("OnEvent", gatherTalent)
 
 local function GetSpellCooldownUnified(id)
   local gcdStart, gcdDuration = GetSpellCooldown(61304);
@@ -105,12 +136,6 @@ end
 local function checkForCd(spellId)
   local charges, maxCharges, startTime, duration = GetSpellCooldownUnified(spellId);
   if (charges and charges > 1) or (maxCharges and maxCharges > 1) or duration > 0 then
-    if (not spellsWithCd[spellId]) then
-      PRINT("Adding "  .. GetSpellInfo(spellId) .. " " .. duration);
-      if (gatheringTalent) then
-        spellIdsFromTalent[spellId] = true;
-      end
-    end
     if (charges and charges > 1) or (maxCharges and maxCharges > 1) then
       spellsWithCharge[spellId] = true
     end
@@ -127,24 +152,12 @@ local function checkForBuffs(unit, filter, output)
     end
 
     if (unitCaster == "player" or unitCaster == "pet") then
-      if (not output[spellId]) then
-        PRINT("Adding "  .. GetSpellInfo(spellId));
-        if (gatheringTalent) then
-          spellIdsFromTalent[spellId] = true;
-        end
-      end
       output[spellId] = true;
     end
 
     i = i + 1;
   end
 end
-
-function talents()
-  gatheringTalent = true;
-  PRINT("Gathering Talent information...");
-end
-
 
 frame:SetScript("OnUpdate",
   function()
@@ -195,7 +208,7 @@ local function formatBuffs(input, type, unit)
   for _, spellId in pairs(sorted) do
     local withTalent = "";
     if (spellIdsFromTalent[spellId]) then
-      withTalent = ", talent = 0 "
+      withTalent = (", talent = %d "):format(spellIdsFromTalent[spellId])
     end
     output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. "}, -- " .. GetSpellInfo(spellId) .. "\n";
   end
@@ -245,7 +258,7 @@ function export()
     local spellName = GetSpellInfo(spellId);
     local parameters = "";
     if spellIdsFromTalent[spellId] then
-      parameters = parameters .. ", talent = 0 "
+      parameters = parameters .. (", talent = %s "):format(spellIdsFromTalent[spellId])
     end
     if spellsWithCharge[spellId] then
       parameters = parameters .. ", charges = true "
@@ -272,45 +285,4 @@ function export()
 
   editBox:SetText(buffs .. debuffs .. cooldowns);
   frame:Show();
-end
-
--- Encounter ids are saved in Prototypes.lua, WeakAuras.encounter_table
--- key = encounterJournalID
--- value = encounterID
---
--- Script to get encounterJournalID:
-
---Alternative way to get them:
---<https://wow.tools/dbc/?dbc=journalencounter.db2>
---How to get encounterID:
---<https://wow.tools/dbc/?dbc=dungeonencounter.db2>
-
-function WeakAuras.PrintEncounters()
-  local encounter_list = ""
-  EJ_SelectTier(EJ_GetNumTiers())
-  for _,inRaid in ipairs({false, true}) do
-     local instance_index = 1
-     local instance_id
-     local dungeon_name
-     local title = inRaid and "Raids" or "Dungeons"
-     encounter_list = ("%s|cffffd200%s|r\n"):format(encounter_list, title)
-     repeat
-        instance_id, dungeon_name = EJ_GetInstanceByIndex(instance_index, inRaid)
-        instance_index = instance_index + 1
-        if instance_id then
-           EJ_SelectInstance(instance_id)
-           local encounter_index = 1
-           encounter_list = ("%s|cffffd200%s|r\n"):format(encounter_list, dungeon_name)
-           repeat
-              local encounter_name,_, encounter_id = EJ_GetEncounterInfoByIndex(encounter_index)
-              encounter_index = encounter_index + 1
-              if encounter_id then
-                 encounter_list = ("%s%s: %d\n"):format(encounter_list, encounter_name, encounter_id)
-              end
-           until not encounter_id
-        end
-     until not instance_id
-     encounter_list = encounter_list .. "\n"
-  end
-  print(string.format("%s\n%s", encounter_list, "Supports multiple entries, separated by commas\n"))
 end
