@@ -38,6 +38,7 @@ local targetDebuffs = {};
 local spellIdsFromTalent = {};
 local spellsWithCharge = {};
 local spellsWithGlowOverlay = {};
+local spellsWithRange = {};
 
 ---
 
@@ -85,6 +86,39 @@ spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
 spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
 spelloverlay_frame:SetScript("OnEvent", function(self, event, spellId)
   spellsWithGlowOverlay[spellId] = true
+end)
+
+local function checkTargetedSpells()
+  for spellId in pairs(spellsWithCd) do
+    local spellName = GetSpellInfo(spellId)
+    if spellName then
+      if IsSpellInRange(spellName, "target") == 0 then
+        spellsWithRange[spellId] = true
+      end
+    end
+  end
+  for spellId in pairs(spellIdsFromTalent) do
+    local spellName = GetSpellInfo(spellId)
+    if spellName then
+      if IsSpellInRange(spellName, "target") == 0 then
+        spellsWithRange[spellId] = true
+      end
+    end
+  end
+  for actionSlot = 1, 120 do
+    local actionType, spellId = GetActionInfo(actionSlot)
+    if actionType == "spell" and spellId and IsActionInRange(actionSlot) == false then
+      spellsWithRange[spellId] = true
+    end
+  end
+end
+
+local spellRange_frame = CreateFrame("Frame")
+spellRange_frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+spellRange_frame:SetScript("OnEvent", function()
+  if UnitExists("target") then
+    checkTargetedSpells()
+  end
 end)
 
 local function GetSpellCooldownUnified(id)
@@ -252,7 +286,14 @@ function export()
 
   -- CDS
   local sortedCds = {};
-  for spellId, _ in pairs(spellsWithCd) do
+  local temp = {}
+  for spellId in pairs(spellsWithCd) do
+    temp[spellId] = true
+  end
+  for spellId in pairs(spellsWithRange) do
+    temp[spellId] = true
+  end
+  for spellId in pairs(temp) do
     tinsert(sortedCds, spellId);
   end
   sort(sortedCds);
@@ -283,6 +324,9 @@ function export()
     end
     if spellsWithGlowOverlay[spellId] then
       parameters = parameters .. ", overlayGlow = true "
+    end
+    if spellsWithRange[spellId] then
+      parameters = parameters .. ", requiresTarget = true "
     end
     -- TODO handle if possible: requiresTarget, totem, overlayGlow, usable
 
