@@ -37,6 +37,7 @@ local petBuffs = {};
 local targetDebuffs = {};
 local spellIdsFromTalent = {};
 local spellsWithCharge = {};
+local spellsWithGlowOverlay = {};
 
 ---
 
@@ -78,6 +79,13 @@ spec_frame:RegisterEvent("TRAIT_CONFIG_CREATED")
 spec_frame:RegisterEvent("TRAIT_CONFIG_UPDATED")
 spec_frame:RegisterEvent("PLAYER_TALENT_UPDATE")
 spec_frame:SetScript("OnEvent", gatherTalent)
+
+local spelloverlay_frame = CreateFrame("Frame")
+spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
+spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
+spelloverlay_frame:SetScript("OnEvent", function(self, event, spellId)
+  spellsWithGlowOverlay[spellId] = true
+end)
 
 local function GetSpellCooldownUnified(id)
   local gcdStart, gcdDuration = GetSpellCooldown(61304);
@@ -272,6 +280,9 @@ function export()
     end
     if targetBuffs[spellId] then
       parameters = parameters .. ", debuff = true "
+    end
+    if spellsWithGlowOverlay[spellId] then
+      parameters = parameters .. ", overlayGlow = true "
     end
     -- TODO handle if possible: requiresTarget, totem, overlayGlow, usable
 
