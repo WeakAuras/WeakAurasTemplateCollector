@@ -39,6 +39,7 @@ local spellIdsFromTalent = {};
 local spellsWithCharge = {};
 local spellsWithGlowOverlay = {};
 local spellsWithRange = {};
+local spellsWithTotem = {};
 
 ---
 
@@ -120,6 +121,38 @@ spellRange_frame:SetScript("OnEvent", function()
     checkTargetedSpells()
   end
 end)
+
+do
+  local lastSpellId, lastSpellTime
+  local totems = {}
+  local totem_frame = CreateFrame("Frame")
+  totem_frame:RegisterEvent("PLAYER_TOTEM_UPDATE")
+  totem_frame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
+  totem_frame:SetScript("OnEvent", function(self, event, unit, castGUID, spellId)
+    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+      lastSpellId = spellId
+      lastSpellTime = GetTime()
+    elseif event == "PLAYER_TOTEM_UPDATE" then
+      local now = GetTime()
+      for index = 1, MAX_TOTEMS do
+        local _, totemName = GetTotemInfo(index)
+        if totemName and totemName ~= "" then
+          if totems[index] == nil -- new totem
+          and lastSpellTime
+          and now - lastSpellTime <= 0.2
+          and not spellsWithTotem[lastSpellId]
+          then
+            spellsWithTotem[lastSpellId] = true
+            PRINT("totem: "..GetSpellInfo(lastSpellId))
+          end
+          totems[index] = true
+        else
+          totems[index] = nil
+        end
+      end
+    end
+  end)
+end
 
 local function GetSpellCooldownUnified(id)
   local gcdStart, gcdDuration = GetSpellCooldown(61304);
@@ -328,7 +361,10 @@ function export()
     if spellsWithRange[spellId] then
       parameters = parameters .. ", requiresTarget = true "
     end
-    -- TODO handle if possible: requiresTarget, totem, overlayGlow, usable
+    if spellsWithTotem[spellId] then
+      parameters = parameters .. ", totem = true "
+    end
+    -- TODO handle if possible:  totem, usable
 
     cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. "}, -- ".. spellName .. "\n"
   end
