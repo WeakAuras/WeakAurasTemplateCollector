@@ -45,7 +45,7 @@ local spellsWithTotem = {};
 
 local function PRINT(t)
   local text = editBox:GetText();
-  text = text .. "\n" .. t;
+  text = t .. "\n" .. text;
   editBox:SetText(text);
 end
 
@@ -66,7 +66,7 @@ local function gatherTalent()
           local spellName = GetSpellInfo(definitionInfo.spellID)
           if spellName then
             spellIdsFromTalent[definitionInfo.spellID] = talentIndex
-            PRINT("Save talent: "..spellName)
+            --PRINT("Save talent: "..spellName)
             talentIndex = talentIndex + 1
           end
         end
@@ -86,6 +86,9 @@ local spelloverlay_frame = CreateFrame("Frame")
 spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
 spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
 spelloverlay_frame:SetScript("OnEvent", function(self, event, spellId)
+  if not spellsWithGlowOverlay[spellId] then
+    PRINT("overlayGlow: "..GetSpellInfo(spellId))
+  end
   spellsWithGlowOverlay[spellId] = true
 end)
 
@@ -94,6 +97,9 @@ local function checkTargetedSpells()
     local spellName = GetSpellInfo(spellId)
     if spellName then
       if IsSpellInRange(spellName, "target") == 0 then
+        if not spellsWithRange[spellId] then
+          PRINT("requiresTarget: "..GetSpellInfo(spellId))
+        end
         spellsWithRange[spellId] = true
       end
     end
@@ -102,6 +108,9 @@ local function checkTargetedSpells()
     local spellName = GetSpellInfo(spellId)
     if spellName then
       if IsSpellInRange(spellName, "target") == 0 then
+        if not spellsWithRange[spellId] then
+          PRINT("requiresTarget: "..GetSpellInfo(spellId))
+        end
         spellsWithRange[spellId] = true
       end
     end
@@ -109,6 +118,9 @@ local function checkTargetedSpells()
   for actionSlot = 1, 120 do
     local actionType, spellId = GetActionInfo(actionSlot)
     if actionType == "spell" and spellId and IsActionInRange(actionSlot) == false then
+      if not spellsWithRange[spellId] then
+        PRINT("requiresTarget: "..GetSpellInfo(spellId))
+      end
       spellsWithRange[spellId] = true
     end
   end
@@ -212,7 +224,13 @@ local function checkForCd(spellId)
   local charges, maxCharges, startTime, duration = GetSpellCooldownUnified(spellId);
   if (charges and charges > 1) or (maxCharges and maxCharges > 1) or duration > 0 then
     if (charges and charges > 1) or (maxCharges and maxCharges > 1) then
+      if not spellsWithCharge[spellId] then
+        PRINT("charge: "..GetSpellInfo(spellId))
+      end
       spellsWithCharge[spellId] = true
+    end
+    if not spellsWithCharge[spellId] and not spellsWithCd[spellId] then
+      PRINT("cd: "..GetSpellInfo(spellId))
     end
     spellsWithCd[spellId] = true;
   end
@@ -230,6 +248,13 @@ local function checkForBuffs(unit, filter, output)
     end
 
     if (unitCaster == "player" or unitCaster == "pet") and not bannedAuras[spellId] then
+      if not output[spellId] then
+        PRINT(("%s %s: %s"):format(
+          filter == "HELPFUL" and "buff" or "debuff",
+          unit,
+          name
+        ))
+      end
       output[spellId] = true;
     end
 
