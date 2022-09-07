@@ -140,7 +140,11 @@ local function checkTargetedSpells()
   end
   for actionSlot = 1, 120 do
     local actionType, spellId = GetActionInfo(actionSlot)
-    if actionType == "spell" and spellId and IsActionInRange(actionSlot) == false then
+    if actionType == "spell"
+    and spellId
+    and (IsPlayerSpell(spellId) or IsSpellKnown(spellId, true))
+    and IsActionInRange(actionSlot) == false
+    then
       if not specDB.spellsWithRequireTarget[spellId] then
         PRINT("requiresTarget: "..GetSpellInfo(spellId))
       end
@@ -262,6 +266,7 @@ end
 do
   local skipIfSpellOnCooldown = {
     [109132] = true, -- monk's roll
+    [358267] = true, -- evoker's hover
   }
   local usable_frame = CreateFrame("Frame")
   usable_frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
@@ -275,7 +280,10 @@ do
     end
     for actionSlot = 1, 120 do
       local actionType, spellId = GetActionInfo(actionSlot)
-      if actionType == "spell" and spellId then
+      if actionType == "spell"
+      and spellId
+      and (IsPlayerSpell(spellId) or IsSpellKnown(spellId, true))
+      then
         local isUsable, notEnoughMana = IsUsableAction(actionSlot)
         if isUsable == false and not notEnoughMana then
           if not specDB.spellsWithUsable[spellId] then
