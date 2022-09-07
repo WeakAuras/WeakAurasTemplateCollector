@@ -50,7 +50,8 @@ local function updateSpec()
     "spellsWithCharge",
     "spellsWithGlowOverlay",
     "spellsWithRequireTarget",
-    "spellsWithTotem"
+    "spellsWithTotem",
+    "spellsWithUsable"
   }) do
     specDB[field] = specDB[field] or {}
   end
@@ -258,6 +259,35 @@ local function checkForCd(spellId)
   end
 end
 
+do
+  local skipIfSpellOnCooldown = {
+    [109132] = true, -- monk's roll
+  }
+  local usable_frame = CreateFrame("Frame")
+  usable_frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+  usable_frame:SetScript("OnEvent", function()
+    for spellId in pairs(skipIfSpellOnCooldown) do
+      local charges, maxCharges, startTime, duration = GetSpellCooldownUnified(spellId)
+      if startTime and startTime > 0 then
+        PRINT("usable check paused until "..GetSpellInfo(spellId).." is ready")
+        return
+      end
+    end
+    for actionSlot = 1, 120 do
+      local actionType, spellId = GetActionInfo(actionSlot)
+      if actionType == "spell" and spellId then
+        local isUsable, notEnoughMana = IsUsableAction(actionSlot)
+        if isUsable == false and not notEnoughMana then
+          if not specDB.spellsWithUsable[spellId] then
+            PRINT("usable: "..GetSpellInfo(spellId))
+            specDB.spellsWithUsable[spellId] = true
+          end
+        end
+      end
+    end
+  end)
+end
+
 local bannedAuras = {
   [335148] = true, -- timewalking event
   [59650] = true, -- flying mount
@@ -418,12 +448,14 @@ function export()
     if specDB.spellsWithTotem[spellId] then
       parameters = parameters .. ", totem = true"
     end
+    if specDB.spellsWithUsable[spellId] then
+      parameters = parameters .. ", usable = true"
+    end
     if specDB.spellIdsFromTalent[spellId] then
       parameters = parameters .. (", talent = %s"):format(specDB.spellIdsFromTalent[spellId])
     elseif specDB.talentsByName[spellName] then
       parameters = parameters .. (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
     end
-    -- TODO handle if possible:  usable
 
     cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. " }, -- ".. spellName .. "\n"
   end
