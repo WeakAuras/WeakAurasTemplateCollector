@@ -378,6 +378,13 @@ local function formatBuffs(input, type, unit)
   return output;
 end
 
+function reset(field)
+  if not field then return end
+  if specDB[field] then
+    wipe(specDB[field])
+  end
+end
+
 function export()
 
   local buffs =
