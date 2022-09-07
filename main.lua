@@ -47,6 +47,7 @@ local function updateSpec()
     "targetDebuffs",
     "spellIdsFromTalent",
     "talentsByName",
+    "SpellsWithPvpTalent",
     "spellsWithCharge",
     "spellsWithGlowOverlay",
     "spellsWithRequireTarget",
@@ -296,6 +297,22 @@ do
   end)
 end
 
+local pvpTalent_frame = CreateFrame("Frame")
+pvpTalent_frame:RegisterEvent("PLAYER_PVP_TALENT_UPDATE")
+pvpTalent_frame:SetScript("OnEvent", function()
+  local slotInfo = C_SpecializationInfo.GetPvpTalentSlotInfo(1);
+  if (slotInfo) then
+     local pvpSpecTalents = slotInfo.availableTalentIDs
+     for i, talentId in ipairs(pvpSpecTalents) do
+        local _, _, _, _, _ , spellId = GetPvpTalentInfoByID(talentId)
+        if not specDB.SpellsWithPvpTalent[spellId] then
+          PRINT("pvptalent: "..GetSpellInfo(spellId))
+          specDB.SpellsWithPvpTalent[spellId] = talentId
+        end
+     end
+  end
+end)
+
 local bannedAuras = {
   [335148] = true, -- timewalking event
   [59650] = true, -- flying mount
@@ -371,19 +388,38 @@ local function formatBuffs(input, type, unit)
 
   local output = "";
   for _, spellId in pairs(sorted) do
-    local withTalent = "";
-    if (specDB.spellIdsFromTalent[spellId]) then
-      withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[spellId])
-    else
-      local spellName = GetSpellInfo(spellId)
-      if specDB.talentsByName[spellName] then
-        withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
+    if not specDB.SpellsWithPvpTalent[spellId] then
+      local withTalent = "";
+      if (specDB.spellIdsFromTalent[spellId]) then
+        withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[spellId])
+      else
+        local spellName = GetSpellInfo(spellId)
+        if specDB.talentsByName[spellName] then
+          withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
+        end
       end
+      output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. " }, -- " .. GetSpellInfo(spellId) .. "\n";
     end
-    output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. " }, -- " .. GetSpellInfo(spellId) .. "\n";
   end
 
-  return output;
+  return output
+end
+
+
+local function formatBuffsPvp(input, type, unit)
+  local sorted = {};
+  for k, _ in pairs(input) do
+    tinsert(sorted, k);
+  end
+
+  local output = "";
+  for _, spellId in pairs(sorted) do
+    if specDB.SpellsWithPvpTalent[spellId] then
+      output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\", pvptalent = " .. specDB.SpellsWithPvpTalent[spellId]  .. ", titleSuffix = L[\""..type.."\"]} }, -- " .. GetSpellInfo(spellId) .. "\n";
+    end
+  end
+
+  return output
 end
 
 function reset(field)
@@ -417,7 +453,10 @@ function export()
   "      icon = 458972\n" ..
   "    },\n"
 
-
+  local pvpBuffs = formatBuffsPvp(specDB.playerBuffs, "buff", "player")
+  pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.targetBuffs, "buff", "target")
+  pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.petBuffs, "buff", "pet")
+  pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.targetDebuffs, "debuff", "target")
 
   -- CDS
   local sortedCds = {};
@@ -433,10 +472,31 @@ function export()
   end
   sort(sortedCds);
 
-  local cooldowns =
+  local pre_cooldowns =
   "    [3] = {\n" ..
   "      title = L[\"Cooldowns\"],\n" ..
   "      args = {\n";
+  local post_cooldowns =
+  "      },\n" ..
+  "      icon = 136012\n" ..
+  "    },\n";
+  local pre_pvpTalents =
+  "  [4] = {},\n"..
+  "  [5] = {},\n"..
+  "  [6] = {},\n"..
+  "  [7] = {},\n"..
+  "  [8] = {},\n"..
+  "  [9] = {},\n"..
+  "  [10] = {\n"..
+  "    title = L[\"PvP Talents\"],\n"..
+  "    args = {\n"
+
+  local post_pvpTalents =
+  "    },\n"..
+  "    icon = \"Interface/Icons/Achievement_BG_winWSG\",\n"..
+  "  },\n"
+  local cooldowns = ""
+  local pvpTalents = ""
 
   for _, spellId in ipairs(sortedCds) do
     local spellName = GetSpellInfo(spellId);
@@ -472,14 +532,15 @@ function export()
       parameters = parameters .. (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
     end
 
-    cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. " }, -- ".. spellName .. "\n"
+    if specDB.SpellsWithPvpTalent[spellId] then
+      parameters = parameters .. (", pvptalent = %d"):format(specDB.SpellsWithPvpTalent[spellId])
+      pvpTalents = pvpTalents .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. ", titleSuffix = L[\"cooldown\"] }, -- ".. spellName .. "\n"
+    else
+      cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. " }, -- ".. spellName .. "\n"
+    end
   end
 
-  cooldowns = cooldowns ..
-  "      },\n" ..
-  "      icon = 136012\n" ..
-  "    },\n";
 
-  editBox:SetText(buffs .. debuffs .. cooldowns);
+  editBox:SetText(buffs .. debuffs .. pre_cooldowns .. cooldowns .. post_cooldowns .. pre_pvpTalents .. pvpBuffs .. pvpTalents .. post_pvpTalents);
   frame:Show();
 end
