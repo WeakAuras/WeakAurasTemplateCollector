@@ -1,4 +1,5 @@
 ## Interface: 100000
 ## Title: WeakaurasTemplateCollector
 ## Dependencies: WeakAuras
+## SavedVariables: TemplateCollectorDB
 main.lua

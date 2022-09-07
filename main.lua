@@ -29,19 +29,33 @@ frame:SetWidth(300)
 frame:SetHeight(715)
 editBox:SetWidth(500);
 
---- OUTPUT
-local spellsWithCd = {};
-local playerBuffs = {};
-local targetBuffs = {};
-local petBuffs = {};
-local targetDebuffs = {};
-local spellIdsFromTalent = {};
-local spellsWithCharge = {};
-local spellsWithGlowOverlay = {};
-local spellsWithRange = {};
-local spellsWithTotem = {};
+local specDB
+local talentsInitialized = false
 
----
+local function updateSpec()
+  TemplateCollectorDB = TemplateCollectorDB or {}
+  local classID = select(3, UnitClass("player"))
+  local specIndex = GetSpecialization()
+  local specId = GetSpecializationInfoForClassID(classID, specIndex)
+  TemplateCollectorDB[specId] = TemplateCollectorDB[specId] or {}
+  specDB = TemplateCollectorDB[specId]
+  for _, field in ipairs({
+    "spellsWithCd",
+    "playerBuffs",
+    "targetBuffs",
+    "petBuffs",
+    "targetDebuffs",
+    "spellIdsFromTalent",
+    "spellsWithCharge",
+    "spellsWithGlowOverlay",
+    "spellsWithRange",
+    "spellsWithTotem"
+  }) do
+    specDB[field] = specDB[field] or {}
+  end
+
+  talentsInitialized = true
+end
 
 local function PRINT(t)
   local text = editBox:GetText();
@@ -65,7 +79,7 @@ local function gatherTalent()
           local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
           local spellName = GetSpellInfo(definitionInfo.spellID)
           if spellName then
-            spellIdsFromTalent[definitionInfo.spellID] = talentIndex
+            specDB.spellIdsFromTalent[definitionInfo.spellID] = talentIndex
             --PRINT("Save talent: "..spellName)
             talentIndex = talentIndex + 1
           end
@@ -80,48 +94,51 @@ spec_frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 spec_frame:RegisterEvent("TRAIT_CONFIG_CREATED")
 spec_frame:RegisterEvent("TRAIT_CONFIG_UPDATED")
 spec_frame:RegisterEvent("PLAYER_TALENT_UPDATE")
-spec_frame:SetScript("OnEvent", gatherTalent)
+spec_frame:SetScript("OnEvent", function()
+  updateSpec()
+  gatherTalent()
+end)
 
 local spelloverlay_frame = CreateFrame("Frame")
 spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
 spelloverlay_frame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
 spelloverlay_frame:SetScript("OnEvent", function(self, event, spellId)
-  if not spellsWithGlowOverlay[spellId] then
+  if not specDB.spellsWithGlowOverlay[spellId] then
     PRINT("overlayGlow: "..GetSpellInfo(spellId))
   end
-  spellsWithGlowOverlay[spellId] = true
+  specDB.spellsWithGlowOverlay[spellId] = true
 end)
 
 local function checkTargetedSpells()
-  for spellId in pairs(spellsWithCd) do
+  for spellId in pairs(specDB.spellsWithCd) do
     local spellName = GetSpellInfo(spellId)
     if spellName then
       if IsSpellInRange(spellName, "target") == 0 then
-        if not spellsWithRange[spellId] then
+        if not specDB.spellsWithRange[spellId] then
           PRINT("requiresTarget: "..GetSpellInfo(spellId))
         end
-        spellsWithRange[spellId] = true
+        specDB.spellsWithRange[spellId] = true
       end
     end
   end
-  for spellId in pairs(spellIdsFromTalent) do
+  for spellId in pairs(specDB.spellIdsFromTalent) do
     local spellName = GetSpellInfo(spellId)
     if spellName then
       if IsSpellInRange(spellName, "target") == 0 then
-        if not spellsWithRange[spellId] then
+        if not specDB.spellsWithRange[spellId] then
           PRINT("requiresTarget: "..GetSpellInfo(spellId))
         end
-        spellsWithRange[spellId] = true
+        specDB.spellsWithRange[spellId] = true
       end
     end
   end
   for actionSlot = 1, 120 do
     local actionType, spellId = GetActionInfo(actionSlot)
     if actionType == "spell" and spellId and IsActionInRange(actionSlot) == false then
-      if not spellsWithRange[spellId] then
+      if not specDB.spellsWithRange[spellId] then
         PRINT("requiresTarget: "..GetSpellInfo(spellId))
       end
-      spellsWithRange[spellId] = true
+      specDB.spellsWithRange[spellId] = true
     end
   end
 end
@@ -152,9 +169,9 @@ do
           if totems[index] == nil -- new totem
           and lastSpellTime
           and now - lastSpellTime <= 0.2
-          and not spellsWithTotem[lastSpellId]
+          and not specDB.spellsWithTotem[lastSpellId]
           then
-            spellsWithTotem[lastSpellId] = true
+            specDB.spellsWithTotem[lastSpellId] = true
             PRINT("totem: "..GetSpellInfo(lastSpellId))
           end
           totems[index] = true
@@ -224,15 +241,15 @@ local function checkForCd(spellId)
   local charges, maxCharges, startTime, duration = GetSpellCooldownUnified(spellId);
   if (charges and charges > 1) or (maxCharges and maxCharges > 1) or duration > 0 then
     if (charges and charges > 1) or (maxCharges and maxCharges > 1) then
-      if not spellsWithCharge[spellId] then
+      if not specDB.spellsWithCharge[spellId] then
         PRINT("charge: "..GetSpellInfo(spellId))
       end
-      spellsWithCharge[spellId] = true
+      specDB.spellsWithCharge[spellId] = true
     end
-    if not spellsWithCharge[spellId] and not spellsWithCd[spellId] then
+    if not specDB.spellsWithCharge[spellId] and not specDB.spellsWithCd[spellId] then
       PRINT("cd: "..GetSpellInfo(spellId))
     end
-    spellsWithCd[spellId] = true;
+    specDB.spellsWithCd[spellId] = true;
   end
 end
 
@@ -264,6 +281,7 @@ end
 
 frame:SetScript("OnUpdate",
   function()
+    if not talentsInitialized then return end
     for spellTab = 1, GetNumSpellTabs() do
       local _, _, offset, numSpells, _, offspecID = GetSpellTabInfo(spellTab)
       if (offspecID  == 0) then
@@ -290,13 +308,13 @@ frame:SetScript("OnUpdate",
       i = i + 1
     end
 
-    checkForBuffs("player", "HELPFUL", playerBuffs);
+    checkForBuffs("player", "HELPFUL", specDB.playerBuffs);
     if (not UnitIsUnit("player", "target")) then
-      checkForBuffs("target", "HELPFUL", targetBuffs);
+      checkForBuffs("target", "HELPFUL", specDB.targetBuffs);
     end
-    checkForBuffs("pet", "HELPFUL", petBuffs);
+    checkForBuffs("pet", "HELPFUL", specDB.petBuffs);
     if (not UnitIsUnit("player", "target")) then
-      checkForBuffs("target", "HARMFUL ", targetDebuffs);
+      checkForBuffs("target", "HARMFUL ", specDB.targetDebuffs);
     end
 
 end);
@@ -310,8 +328,8 @@ local function formatBuffs(input, type, unit)
   local output = "";
   for _, spellId in pairs(sorted) do
     local withTalent = "";
-    if (spellIdsFromTalent[spellId]) then
-      withTalent = (", talent = %d "):format(spellIdsFromTalent[spellId])
+    if (specDB.spellIdsFromTalent[spellId]) then
+      withTalent = (", talent = %d "):format(specDB.spellIdsFromTalent[spellId])
     end
     output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. "}, -- " .. GetSpellInfo(spellId) .. "\n";
   end
@@ -325,9 +343,9 @@ function export()
   "    [1] = {\n" ..
   "      title = L[\"Buffs\"],\n" ..
   "      args = {\n"
-  buffs = buffs .. formatBuffs(playerBuffs, "buff", "player");
-  buffs = buffs .. formatBuffs(targetBuffs, "buff", "target");
-  buffs = buffs .. formatBuffs(petBuffs, "buff", "pet");
+  buffs = buffs .. formatBuffs(specDB.playerBuffs, "buff", "player");
+  buffs = buffs .. formatBuffs(specDB.targetBuffs, "buff", "target");
+  buffs = buffs .. formatBuffs(specDB.petBuffs, "buff", "pet");
   buffs = buffs ..
   "      },\n" ..
   "      icon = 458972\n" ..
@@ -337,7 +355,7 @@ function export()
   "    [2] = {\n" ..
   "      title = L[\"Debuffs\"],\n" ..
   "      args = {\n"
-  debuffs = debuffs .. formatBuffs(targetDebuffs, "debuff", "target");
+  debuffs = debuffs .. formatBuffs(specDB.targetDebuffs, "debuff", "target");
   debuffs = debuffs ..
   "      },\n" ..
   "      icon = 458972\n" ..
@@ -348,10 +366,10 @@ function export()
   -- CDS
   local sortedCds = {};
   local temp = {}
-  for spellId in pairs(spellsWithCd) do
+  for spellId in pairs(specDB.spellsWithCd) do
     temp[spellId] = true
   end
-  for spellId in pairs(spellsWithRange) do
+  for spellId in pairs(specDB.spellsWithRange) do
     temp[spellId] = true
   end
   for spellId in pairs(temp) do
@@ -367,29 +385,29 @@ function export()
   for _, spellId in ipairs(sortedCds) do
     local spellName = GetSpellInfo(spellId);
     local parameters = "";
-    if spellIdsFromTalent[spellId] then
-      parameters = parameters .. (", talent = %s "):format(spellIdsFromTalent[spellId])
+    if specDB.spellIdsFromTalent[spellId] then
+      parameters = parameters .. (", talent = %s "):format(specDB.spellIdsFromTalent[spellId])
     end
-    if spellsWithCharge[spellId] then
+    if specDB.spellsWithCharge[spellId] then
       parameters = parameters .. ", charges = true "
     end
     -- buff & debuff doesn't work if spellid is different like Death and Decay or Marrowrend
-    if playerBuffs[spellId] then
+    if specDB.playerBuffs[spellId] then
       parameters = parameters .. ", buff = true "
     end
-    if petBuffs[spellId] then
+    if specDB.petBuffs[spellId] then
       parameters = parameters .. ", buff = true, unit = 'pet' "
     end
-    if targetBuffs[spellId] then
+    if specDB.targetBuffs[spellId] then
       parameters = parameters .. ", debuff = true "
     end
-    if spellsWithGlowOverlay[spellId] then
+    if specDB.spellsWithGlowOverlay[spellId] then
       parameters = parameters .. ", overlayGlow = true "
     end
-    if spellsWithRange[spellId] then
+    if specDB.spellsWithRange[spellId] then
       parameters = parameters .. ", requiresTarget = true "
     end
-    if spellsWithTotem[spellId] then
+    if specDB.spellsWithTotem[spellId] then
       parameters = parameters .. ", totem = true "
     end
     -- TODO handle if possible:  totem, usable
