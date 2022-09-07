@@ -307,7 +307,7 @@ pvpTalent_frame:SetScript("OnEvent", function()
         local _, _, _, _, _ , spellId = GetPvpTalentInfoByID(talentId)
         if not specDB.SpellsWithPvpTalent[spellId] then
           PRINT("pvptalent: "..GetSpellInfo(spellId))
-          specDB.SpellsWithPvpTalent[spellId] = talentId
+          specDB.SpellsWithPvpTalent[spellId] = i
         end
      end
   end
