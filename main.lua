@@ -218,6 +218,9 @@ local function checkForCd(spellId)
   end
 end
 
+local bannedAuras = {
+  [335148] = true -- timewalking event
+}
 local function checkForBuffs(unit, filter, output)
   local i = 1
   while true do
@@ -226,7 +229,7 @@ local function checkForBuffs(unit, filter, output)
       break
     end
 
-    if (unitCaster == "player" or unitCaster == "pet") then
+    if (unitCaster == "player" or unitCaster == "pet") and not bannedAuras[spellId] then
       output[spellId] = true;
     end
 
