@@ -329,9 +329,9 @@ local function formatBuffs(input, type, unit)
   for _, spellId in pairs(sorted) do
     local withTalent = "";
     if (specDB.spellIdsFromTalent[spellId]) then
-      withTalent = (", talent = %d "):format(specDB.spellIdsFromTalent[spellId])
+      withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[spellId])
     end
-    output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. "}, -- " .. GetSpellInfo(spellId) .. "\n";
+    output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. " }, -- " .. GetSpellInfo(spellId) .. "\n";
   end
 
   return output;
@@ -385,34 +385,34 @@ function export()
   for _, spellId in ipairs(sortedCds) do
     local spellName = GetSpellInfo(spellId);
     local parameters = "";
-    if specDB.spellIdsFromTalent[spellId] then
-      parameters = parameters .. (", talent = %s "):format(specDB.spellIdsFromTalent[spellId])
-    end
     if specDB.spellsWithCharge[spellId] then
-      parameters = parameters .. ", charges = true "
+      parameters = parameters .. ", charges = true"
     end
     -- buff & debuff doesn't work if spellid is different like Death and Decay or Marrowrend
     if specDB.playerBuffs[spellId] then
-      parameters = parameters .. ", buff = true "
+      parameters = parameters .. ", buff = true"
     end
     if specDB.petBuffs[spellId] then
-      parameters = parameters .. ", buff = true, unit = 'pet' "
+      parameters = parameters .. ", buff = true, unit = 'pet'"
     end
     if specDB.targetBuffs[spellId] then
-      parameters = parameters .. ", debuff = true "
+      parameters = parameters .. ", debuff = true"
     end
     if specDB.spellsWithGlowOverlay[spellId] then
-      parameters = parameters .. ", overlayGlow = true "
+      parameters = parameters .. ", overlayGlow = true"
     end
     if specDB.spellsWithRequireTarget[spellId] then
-      parameters = parameters .. ", requiresTarget = true "
+      parameters = parameters .. ", requiresTarget = true"
     end
     if specDB.spellsWithTotem[spellId] then
-      parameters = parameters .. ", totem = true "
+      parameters = parameters .. ", totem = true"
     end
-    -- TODO handle if possible:  totem, usable
+    if specDB.spellIdsFromTalent[spellId] then
+      parameters = parameters .. (", talent = %s"):format(specDB.spellIdsFromTalent[spellId])
+    end
+    -- TODO handle if possible:  usable
 
-    cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. "}, -- ".. spellName .. "\n"
+    cooldowns = cooldowns .. "        { spell = " .. spellId ..", type = \"ability\"" .. parameters .. " }, -- ".. spellName .. "\n"
   end
 
   cooldowns = cooldowns ..
