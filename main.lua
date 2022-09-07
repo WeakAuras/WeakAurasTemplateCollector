@@ -77,9 +77,13 @@ local function gatherTalent()
         for idx, talentId in ipairs(node.entryIDs) do
           local entryInfo = C_Traits.GetEntryInfo(configId, talentId)
           local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
-          local spellName = GetSpellInfo(definitionInfo.spellID)
+          local spellId = definitionInfo.spellID
+          local spellName = GetSpellInfo(spellId)
           if spellName then
-            specDB.spellIdsFromTalent[definitionInfo.spellID] = talentIndex
+            if not specDB.spellIdsFromTalent[spellId] then
+              PRINT("talent: "..GetSpellInfo(spellId))
+            end
+            specDB.spellIdsFromTalent[spellId] = talentIndex
             --PRINT("Save talent: "..spellName)
             talentIndex = talentIndex + 1
           end
