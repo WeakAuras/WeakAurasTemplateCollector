@@ -117,7 +117,7 @@ end
 local spellRange_frame = CreateFrame("Frame")
 spellRange_frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 spellRange_frame:SetScript("OnEvent", function()
-  if UnitExists("target") then
+  if UnitExists("target") and UnitIsEnemy("player", "target") then
     checkTargetedSpells()
   end
 end)
