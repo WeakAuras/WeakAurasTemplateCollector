@@ -48,7 +48,7 @@ local function updateSpec()
     "spellIdsFromTalent",
     "spellsWithCharge",
     "spellsWithGlowOverlay",
-    "spellsWithRange",
+    "spellsWithRequireTarget",
     "spellsWithTotem"
   }) do
     specDB[field] = specDB[field] or {}
@@ -114,10 +114,10 @@ local function checkTargetedSpells()
     local spellName = GetSpellInfo(spellId)
     if spellName then
       if IsSpellInRange(spellName, "target") == 0 then
-        if not specDB.spellsWithRange[spellId] then
+        if not specDB.spellsWithRequireTarget[spellId] then
           PRINT("requiresTarget: "..GetSpellInfo(spellId))
         end
-        specDB.spellsWithRange[spellId] = true
+        specDB.spellsWithRequireTarget[spellId] = true
       end
     end
   end
@@ -125,28 +125,28 @@ local function checkTargetedSpells()
     local spellName = GetSpellInfo(spellId)
     if spellName then
       if IsSpellInRange(spellName, "target") == 0 then
-        if not specDB.spellsWithRange[spellId] then
+        if not specDB.spellsWithRequireTarget[spellId] then
           PRINT("requiresTarget: "..GetSpellInfo(spellId))
         end
-        specDB.spellsWithRange[spellId] = true
+        specDB.spellsWithRequireTarget[spellId] = true
       end
     end
   end
   for actionSlot = 1, 120 do
     local actionType, spellId = GetActionInfo(actionSlot)
     if actionType == "spell" and spellId and IsActionInRange(actionSlot) == false then
-      if not specDB.spellsWithRange[spellId] then
+      if not specDB.spellsWithRequireTarget[spellId] then
         PRINT("requiresTarget: "..GetSpellInfo(spellId))
       end
-      specDB.spellsWithRange[spellId] = true
+      specDB.spellsWithRequireTarget[spellId] = true
     end
   end
 end
 
-local spellRange_frame = CreateFrame("Frame")
-spellRange_frame:RegisterEvent("PLAYER_TARGET_CHANGED")
-spellRange_frame:SetScript("OnEvent", function()
-  if UnitExists("target") and UnitIsEnemy("player", "target") then
+local requireTarget_frame = CreateFrame("Frame")
+requireTarget_frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+requireTarget_frame:SetScript("OnEvent", function()
+  if UnitExists("target") and UnitCanAttack("player", "target") then
     checkTargetedSpells()
   end
 end)
@@ -369,7 +369,7 @@ function export()
   for spellId in pairs(specDB.spellsWithCd) do
     temp[spellId] = true
   end
-  for spellId in pairs(specDB.spellsWithRange) do
+  for spellId in pairs(specDB.spellsWithRequireTarget) do
     temp[spellId] = true
   end
   for spellId in pairs(temp) do
@@ -404,7 +404,7 @@ function export()
     if specDB.spellsWithGlowOverlay[spellId] then
       parameters = parameters .. ", overlayGlow = true "
     end
-    if specDB.spellsWithRange[spellId] then
+    if specDB.spellsWithRequireTarget[spellId] then
       parameters = parameters .. ", requiresTarget = true "
     end
     if specDB.spellsWithTotem[spellId] then
