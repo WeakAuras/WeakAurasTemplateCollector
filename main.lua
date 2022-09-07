@@ -46,6 +46,7 @@ local function updateSpec()
     "petBuffs",
     "targetDebuffs",
     "spellIdsFromTalent",
+    "talentsByName",
     "spellsWithCharge",
     "spellsWithGlowOverlay",
     "spellsWithRequireTarget",
@@ -84,7 +85,7 @@ local function gatherTalent()
               PRINT("talent: "..GetSpellInfo(spellId))
             end
             specDB.spellIdsFromTalent[spellId] = talentIndex
-            --PRINT("Save talent: "..spellName)
+            specDB.talentsByName[spellName] = spellId
             talentIndex = talentIndex + 1
           end
         end
@@ -334,6 +335,11 @@ local function formatBuffs(input, type, unit)
     local withTalent = "";
     if (specDB.spellIdsFromTalent[spellId]) then
       withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[spellId])
+    else
+      local spellName = GetSpellInfo(spellId)
+      if specDB.talentsByName[spellName] then
+        withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
+      end
     end
     output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. " }, -- " .. GetSpellInfo(spellId) .. "\n";
   end
@@ -413,6 +419,8 @@ function export()
     end
     if specDB.spellIdsFromTalent[spellId] then
       parameters = parameters .. (", talent = %s"):format(specDB.spellIdsFromTalent[spellId])
+    elseif specDB.talentsByName[spellName] then
+      parameters = parameters .. (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
     end
     -- TODO handle if possible:  usable
 
