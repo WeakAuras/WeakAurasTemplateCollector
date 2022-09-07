@@ -259,7 +259,8 @@ local function checkForCd(spellId)
 end
 
 local bannedAuras = {
-  [335148] = true -- timewalking event
+  [335148] = true, -- timewalking event
+  [59650] = true, -- flying mount
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
