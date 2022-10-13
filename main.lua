@@ -314,8 +314,14 @@ pvpTalent_frame:SetScript("OnEvent", function()
 end)
 
 local bannedAuras = {
+  [335149] = true, -- wotlk xp event
   [335148] = true, -- timewalking event
   [59650] = true, -- flying mount
+  [282559] = true, -- xp bonus
+  [225788] = true, -- wq bonus
+  [7353] = true, -- Cozy Fire
+  [225787] = true, -- shadowlands dungeon event
+  [186406] = true, -- pet battle event
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
