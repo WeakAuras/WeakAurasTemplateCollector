@@ -431,7 +431,7 @@ local function formatBuffsPvp(input, type, unit)
   local output = "";
   for _, spellId in pairs(sorted) do
     if specDB.SpellsWithPvpTalent[spellId] then
-      output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\", pvptalent = " .. specDB.SpellsWithPvpTalent[spellId]  .. ", titleSuffix = L[\""..type.."\"]} }, -- " .. GetSpellInfo(spellId) .. "\n";
+      output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\", pvptalent = " .. specDB.SpellsWithPvpTalent[spellId]  .. ", titleSuffix = L[\""..type.."\"] }, -- " .. GetSpellInfo(spellId) .. "\n";
     end
   end
 
@@ -498,20 +498,20 @@ function export()
   "      icon = 136012\n" ..
   "    },\n";
   local pre_pvpTalents =
-  "  [4] = {},\n"..
-  "  [5] = {},\n"..
-  "  [6] = {},\n"..
-  "  [7] = {},\n"..
-  "  [8] = {},\n"..
-  "  [9] = {},\n"..
-  "  [10] = {\n"..
-  "    title = L[\"PvP Talents\"],\n"..
-  "    args = {\n"
+  "    [4] = {},\n"..
+  "    [5] = {},\n"..
+  "    [6] = {},\n"..
+  "    [7] = {},\n"..
+  "    [8] = {},\n"..
+  "    [9] = {},\n"..
+  "    [10] = {\n"..
+  "      title = L[\"PvP Talents\"],\n"..
+  "      args = {\n"
 
   local post_pvpTalents =
-  "    },\n"..
-  "    icon = \"Interface/Icons/Achievement_BG_winWSG\",\n"..
-  "  },\n"
+  "      },\n"..
+  "      icon = \"Interface/Icons/Achievement_BG_winWSG\",\n"..
+  "    },\n"
   local cooldowns = ""
   local pvpTalents = ""
 
