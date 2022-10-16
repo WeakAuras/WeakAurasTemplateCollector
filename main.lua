@@ -271,13 +271,23 @@ do
   }
   local usable_frame = CreateFrame("Frame")
   usable_frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+  local isPaused = false
   usable_frame:SetScript("OnEvent", function()
+    local skip = false
     for spellId in pairs(skipIfSpellOnCooldown) do
       local charges, maxCharges, startTime, duration = GetSpellCooldownUnified(spellId)
       if startTime and startTime > 0 then
-        PRINT("usable check paused until "..GetSpellInfo(spellId).." is ready")
-        return
+        skip = true
+        if not isPaused then
+          PRINT("usable check paused until "..GetSpellInfo(spellId).." is ready")
+          isPaused = true
+          return
+        end
       end
+    end
+    if not skip and isPaused then
+      PRINT("usable check un-paused")
+      isPaused = false
     end
     for actionSlot = 1, 120 do
       local actionType, spellId = GetActionInfo(actionSlot)
@@ -432,6 +442,7 @@ function reset(field)
   if not field then return end
   if specDB[field] then
     wipe(specDB[field])
+    PRINT("reset " .. field)
   end
 end
 
