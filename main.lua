@@ -404,7 +404,7 @@ local function formatBuffs(input, type, unit)
 
   local output = "";
   for _, spellId in pairs(sorted) do
-    if not specDB.SpellsWithPvpTalent[spellId] then
+    if not specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
       local withTalent = "";
       if (specDB.spellIdsFromTalent[spellId]) then
         withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[spellId])
@@ -430,7 +430,7 @@ local function formatBuffsPvp(input, type, unit)
 
   local output = "";
   for _, spellId in pairs(sorted) do
-    if specDB.SpellsWithPvpTalent[spellId] then
+    if specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
       output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\", pvptalent = " .. specDB.SpellsWithPvpTalent[spellId]  .. ", titleSuffix = L[\""..type.."\"] }, -- " .. GetSpellInfo(spellId) .. "\n";
     end
   end
