@@ -332,6 +332,7 @@ local bannedAuras = {
   [7353] = true, -- Cozy Fire
   [225787] = true, -- shadowlands dungeon event
   [186406] = true, -- pet battle event
+  [312370] = true, -- vulpera camp
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
@@ -401,6 +402,7 @@ local function formatBuffs(input, type, unit)
   for k, _ in pairs(input) do
     tinsert(sorted, k);
   end
+  table.sort(sorted)
 
   local output = "";
   for _, spellId in pairs(sorted) do
@@ -427,7 +429,7 @@ local function formatBuffsPvp(input, type, unit)
   for k, _ in pairs(input) do
     tinsert(sorted, k);
   end
-
+  table.sort(sorted)
   local output = "";
   for _, spellId in pairs(sorted) do
     if specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
