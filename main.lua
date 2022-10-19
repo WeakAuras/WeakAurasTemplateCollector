@@ -268,6 +268,7 @@ do
   local skipIfSpellOnCooldown = {
     [109132] = true, -- monk's roll
     [358267] = true, -- evoker's hover
+   -- [205629] = true, -- dh demonic trample pvp talent
   }
   local usable_frame = CreateFrame("Frame")
   usable_frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
@@ -333,6 +334,10 @@ local bannedAuras = {
   [225787] = true, -- shadowlands dungeon event
   [186406] = true, -- pet battle event
   [312370] = true, -- vulpera camp
+  [335150] = true, -- cata timewalking event
+  [2479] = true, -- honorless target
+  [391312] = true, -- tailor buff
+  [186403] = true, -- pvp event
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
