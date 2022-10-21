@@ -410,6 +410,7 @@ local function formatBuffs(input, type, unit)
   table.sort(sorted)
 
   local output = "";
+  local cacheSpellName = {}
   for _, spellId in pairs(sorted) do
     if not specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
       local withTalent = "";
@@ -421,7 +422,11 @@ local function formatBuffs(input, type, unit)
           withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
         end
       end
-      output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. " }, -- " .. GetSpellInfo(spellId) .. "\n";
+      local spellName = GetSpellInfo(spellId)
+      if not cacheSpellName[spellName] then
+        output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. " }, -- " .. spellName .. "\n";
+        cacheSpellName[spellName] = true
+      end
     end
   end
 
@@ -436,9 +441,14 @@ local function formatBuffsPvp(input, type, unit)
   end
   table.sort(sorted)
   local output = "";
+  local cacheSpellName = {}
   for _, spellId in pairs(sorted) do
     if specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
-      output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\", pvptalent = " .. specDB.SpellsWithPvpTalent[spellId]  .. ", titleSuffix = L[\""..type.."\"] }, -- " .. GetSpellInfo(spellId) .. "\n";
+      local spellName = GetSpellInfo(spellId)
+      if not cacheSpellName[spellName] then
+        output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\", pvptalent = " .. specDB.SpellsWithPvpTalent[spellId]  .. ", titleSuffix = L[\""..type.."\"] }, -- " .. spellName .. "\n";
+        cacheSpellName[spellName] = true
+      end
     end
   end
 
@@ -452,6 +462,10 @@ function reset(field)
     PRINT("reset " .. field)
   end
 end
+
+local bannedCds = {
+  [232633] = true, -- arcane torrent
+}
 
 function export()
 
@@ -492,7 +506,9 @@ function export()
     temp[spellId] = true
   end
   for spellId in pairs(temp) do
-    tinsert(sortedCds, spellId);
+    if not bannedCds[spellId] then
+      tinsert(sortedCds, spellId);
+    end
   end
   sort(sortedCds);
 
