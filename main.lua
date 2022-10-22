@@ -465,6 +465,8 @@ end
 
 local bannedCds = {
   [232633] = true, -- arcane torrent
+  [312372] = true, -- camp
+  [312370] = true, -- camp
 }
 
 function export()
