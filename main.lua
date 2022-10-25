@@ -338,6 +338,7 @@ local bannedAuras = {
   [2479] = true, -- honorless target
   [391312] = true, -- tailor buff
   [186403] = true, -- pvp event
+  [186401] = true, -- pvp event
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
@@ -465,6 +466,12 @@ end
 
 local bannedCds = {
   [232633] = true, -- arcane torrent
+  [25046] = true, -- arcane torrent
+  [155145] = true, -- arcane torrent
+  [202719] = true, -- arcane torrent
+  [129597] = true, -- arcane torrent
+  [28730] = true, -- arcane torrent
+  [80483] = true,
   [312372] = true, -- camp
   [312370] = true, -- camp
 }
