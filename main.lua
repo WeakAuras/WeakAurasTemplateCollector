@@ -415,11 +415,11 @@ local function formatBuffs(input, type, unit)
     if not specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
       local withTalent = "";
       if (specDB.spellIdsFromTalent[spellId]) then
-        withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[spellId])
+        withTalent = (", talent = %d"):format(spellId)
       else
         local spellName = GetSpellInfo(spellId)
         if specDB.talentsByName[spellName] then
-          withTalent = (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
+          withTalent = (", talent = %d"):format(specDB.talentsByName[spellName])
         end
       end
       local spellName = GetSpellInfo(spellId)
@@ -569,9 +569,9 @@ function export()
       parameters = parameters .. ", usable = true"
     end
     if specDB.spellIdsFromTalent[spellId] then
-      parameters = parameters .. (", talent = %s"):format(specDB.spellIdsFromTalent[spellId])
+      parameters = parameters .. (", talent = %s"):format(spellId)
     elseif specDB.talentsByName[spellName] then
-      parameters = parameters .. (", talent = %d"):format(specDB.spellIdsFromTalent[specDB.talentsByName[spellName]])
+      parameters = parameters .. (", talent = %d"):format(specDB.talentsByName[spellName])
     end
 
     if specDB.SpellsWithPvpTalent[spellId] then
