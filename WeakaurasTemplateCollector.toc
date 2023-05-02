@@ -1,5 +1,6 @@
-## Interface: 100000
+## Interface: 100100
 ## Title: WeakaurasTemplateCollector
 ## Dependencies: WeakAuras
 ## SavedVariables: TemplateCollectorDB
+## IconTexture: Interface\Addons\WeakAurasTemplateCollector\media\icon.tga
 main.lua
