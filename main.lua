@@ -45,8 +45,8 @@ local function updateSpec()
     "targetBuffs",
     "petBuffs",
     "targetDebuffs",
-    "spellIdsFromTalent",
-    "talentsByName",
+    "spellNameToTalentId",
+    "spellIdToTalentId",
     "SpellsWithPvpTalent",
     "spellsWithCharge",
     "spellsWithGlowOverlay",
@@ -67,7 +67,6 @@ local function PRINT(t)
 end
 
 local function gatherTalent()
-  local talentIndex = 1
   local configId = C_ClassTalents.GetActiveConfigID()
   if configId == nil then return end
   local configInfo = C_Traits.GetConfigInfo(configId)
@@ -83,12 +82,11 @@ local function gatherTalent()
           local spellId = definitionInfo.spellID
           local spellName = GetSpellInfo(spellId)
           if spellName then
-            if not specDB.spellIdsFromTalent[spellId] then
+            if not specDB.spellIdToTalentId[spellId] then
               PRINT("talent: "..GetSpellInfo(spellId))
             end
-            specDB.spellIdsFromTalent[spellId] = talentIndex
-            specDB.talentsByName[spellName] = spellId
-            talentIndex = talentIndex + 1
+            specDB.spellIdToTalentId[spellId] = talentId
+            specDB.spellNameToTalentId[spellName] = talentId
           end
         end
       end
@@ -128,7 +126,7 @@ local function checkTargetedSpells()
       end
     end
   end
-  for spellId in pairs(specDB.spellIdsFromTalent) do
+  for spellId in pairs(specDB.spellIdToTalentId) do
     local spellName = GetSpellInfo(spellId)
     if spellName then
       if IsSpellInRange(spellName, "target") == 0 then
@@ -339,6 +337,10 @@ local bannedAuras = {
   [391312] = true, -- tailor buff
   [186403] = true, -- pvp event
   [186401] = true, -- pvp event
+  [410231] = true, -- undulating sporecloak
+  [411256] = true, -- winds of sanctuary
+  [335152] = true, -- sign of iron
+  [353263] = true, -- mount
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
@@ -415,12 +417,12 @@ local function formatBuffs(input, type, unit)
   for _, spellId in pairs(sorted) do
     if not specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
       local withTalent = "";
-      if (specDB.spellIdsFromTalent[spellId]) then
-        withTalent = (", talent = %d"):format(spellId)
+      if (specDB.spellIdToTalentId[spellId]) then
+        withTalent = (", talent = %d"):format(specDB.spellIdToTalentId[spellId])
       else
         local spellName = GetSpellInfo(spellId)
-        if specDB.talentsByName[spellName] then
-          withTalent = (", talent = %d"):format(specDB.talentsByName[spellName])
+        if specDB.spellNameToTalentId[spellName] then
+          withTalent = (", talent = %d"):format(specDB.spellNameToTalentId[spellName])
         end
       end
       local spellName = GetSpellInfo(spellId)
@@ -457,7 +459,10 @@ local function formatBuffsPvp(input, type, unit)
 end
 
 function reset(field)
-  if not field then return end
+  if not field then
+    wipe(specDB)
+    updateSpec()
+  end
   if specDB[field] then
     wipe(specDB[field])
     PRINT("reset " .. field)
@@ -474,6 +479,8 @@ local bannedCds = {
   [80483] = true,
   [312372] = true, -- camp
   [312370] = true, -- camp
+  [382499] =  true, -- Anomaly Detection Mark I
+  [382501] = true, -- Mechanism Bypass
 }
 
 function export()
@@ -575,10 +582,10 @@ function export()
     if specDB.spellsWithUsable[spellId] then
       parameters = parameters .. ", usable = true"
     end
-    if specDB.spellIdsFromTalent[spellId] then
-      parameters = parameters .. (", talent = %s"):format(spellId)
-    elseif specDB.talentsByName[spellName] then
-      parameters = parameters .. (", talent = %d"):format(specDB.talentsByName[spellName])
+    if specDB.spellIdToTalentId[spellId] then
+      parameters = parameters .. (", talent = %s"):format(specDB.spellIdToTalentId[spellId])
+    elseif specDB.spellNameToTalentId[spellName] then
+      parameters = parameters .. (", talent = %d"):format(specDB.spellNameToTalentId[spellName])
     end
 
     if specDB.SpellsWithPvpTalent[spellId] then
