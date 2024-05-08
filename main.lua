@@ -1,4 +1,8 @@
+local _, addon = ...
+
 local CreateFrame, UnitIsUnit, tinsert, sort, GetSpellBookItemName, GetSpellTabInfo, GetNumSpellTabs, GetSpellInfo, UnitAura, GetSpellCooldown, GetSpellCharges, GetSpellBaseCooldown = CreateFrame, UnitIsUnit, tinsert, sort, GetSpellBookItemName, GetSpellTabInfo, GetNumSpellTabs, GetSpellInfo, UnitAura, GetSpellCooldown, GetSpellCharges, GetSpellBaseCooldown
+
+local isCata = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
 
 local backdrop = {
 bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
@@ -34,11 +38,17 @@ local talentsInitialized = false
 
 local function updateSpec()
   TemplateCollectorDB = TemplateCollectorDB or {}
-  local classID = select(3, UnitClass("player"))
-  local specIndex = GetSpecialization()
-  local specId = GetSpecializationInfoForClassID(classID, specIndex)
-  TemplateCollectorDB[specId] = TemplateCollectorDB[specId] or {}
-  specDB = TemplateCollectorDB[specId]
+  if isCata then
+    local _, class = UnitClass("player")
+    TemplateCollectorDB[class] = TemplateCollectorDB[class] or {}
+    specDB = TemplateCollectorDB[class]
+  else
+    local _, _, classID = UnitClass("player")
+    local specIndex = GetSpecialization()
+    local specId = GetSpecializationInfoForClassID(classID, specIndex)
+    TemplateCollectorDB[specId] = TemplateCollectorDB[specId] or {}
+    specDB = TemplateCollectorDB[specId]
+  end
   for _, field in ipairs({
     "spellsWithCd",
     "playerBuffs",
@@ -67,27 +77,42 @@ local function PRINT(t)
 end
 
 local function gatherTalent()
-  local configId = C_ClassTalents.GetActiveConfigID()
-  if configId == nil then return end
-  local configInfo = C_Traits.GetConfigInfo(configId)
-  if configInfo == nil then return end
-  for _, treeId in ipairs(configInfo.treeIDs) do
-    local nodes = C_Traits.GetTreeNodes(treeId)
-    for _, nodeId in ipairs(nodes) do
-      local node = C_Traits.GetNodeInfo(configId, nodeId)
-      if node.ID ~= 0 then
-        for idx, talentId in ipairs(node.entryIDs) do
-          local entryInfo = C_Traits.GetEntryInfo(configId, talentId)
-          local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
-          local spellId = definitionInfo.spellID
-          local spellName = GetSpellInfo(spellId)
-          if spellName then
-            if not specDB.spellIdToTalentId[spellId] then
-              PRINT("talent: "..GetSpellInfo(spellId))
+  print("gatherTalent")
+  if not isCata then
+    local configId = C_ClassTalents.GetActiveConfigID()
+    if configId == nil then return end
+    local configInfo = C_Traits.GetConfigInfo(configId)
+    if configInfo == nil then return end
+    for _, treeId in ipairs(configInfo.treeIDs) do
+      local nodes = C_Traits.GetTreeNodes(treeId)
+      for _, nodeId in ipairs(nodes) do
+        local node = C_Traits.GetNodeInfo(configId, nodeId)
+        if node.ID ~= 0 then
+          for idx, talentId in ipairs(node.entryIDs) do
+            local entryInfo = C_Traits.GetEntryInfo(configId, talentId)
+            local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
+            local spellId = definitionInfo.spellID
+            local spellName = GetSpellInfo(spellId)
+            if spellName then
+              if not specDB.spellIdToTalentId[spellId] then
+                PRINT("talent: "..GetSpellInfo(spellId))
+              end
+              specDB.spellIdToTalentId[spellId] = talentId
+              specDB.spellNameToTalentId[spellName] = talentId
             end
-            specDB.spellIdToTalentId[spellId] = talentId
-            specDB.spellNameToTalentId[spellName] = talentId
           end
+        end
+      end
+    end
+  else
+    local _, class = UnitClass("player")
+    local classData  = addon.cataTalentInfo[class]
+    if classData then
+      for talentId, data in pairs(classData) do
+        if data[4] then
+          local spellId, spellName = data[4], GetSpellInfo(data[4])
+          specDB.spellIdToTalentId[spellId] = talentId
+          specDB.spellNameToTalentId[spellName] = talentId
         end
       end
     end
@@ -99,6 +124,11 @@ spec_frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 spec_frame:RegisterEvent("TRAIT_CONFIG_CREATED")
 spec_frame:RegisterEvent("TRAIT_CONFIG_UPDATED")
 spec_frame:RegisterEvent("PLAYER_TALENT_UPDATE")
+if isCata then
+  spec_frame:RegisterEvent("CHARACTER_POINTS_CHANGED")
+  spec_frame:RegisterEvent("PLAYER_TALENT_UPDATE");
+  spec_frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
+end
 spec_frame:SetScript("OnEvent", function()
   updateSpec()
   gatherTalent()
@@ -266,6 +296,7 @@ do
   local skipIfSpellOnCooldown = {
     [109132] = true, -- monk's roll
     [358267] = true, -- evoker's hover
+    --[46924] = true, -- warrior bladestorm
    -- [205629] = true, -- dh demonic trample pvp talent
   }
   local usable_frame = CreateFrame("Frame")
@@ -306,21 +337,23 @@ do
   end)
 end
 
-local pvpTalent_frame = CreateFrame("Frame")
-pvpTalent_frame:RegisterEvent("PLAYER_PVP_TALENT_UPDATE")
-pvpTalent_frame:SetScript("OnEvent", function()
-  local slotInfo = C_SpecializationInfo.GetPvpTalentSlotInfo(1);
-  if (slotInfo) then
-     local pvpSpecTalents = slotInfo.availableTalentIDs
-     for i, talentId in ipairs(pvpSpecTalents) do
-        local _, _, _, _, _ , spellId = GetPvpTalentInfoByID(talentId)
-        if not specDB.SpellsWithPvpTalent[spellId] then
-          PRINT("pvptalent: "..GetSpellInfo(spellId))
-          specDB.SpellsWithPvpTalent[spellId] = i
-        end
-     end
-  end
-end)
+if not isCata then
+  local pvpTalent_frame = CreateFrame("Frame")
+  pvpTalent_frame:RegisterEvent("PLAYER_PVP_TALENT_UPDATE")
+  pvpTalent_frame:SetScript("OnEvent", function()
+    local slotInfo = C_SpecializationInfo.GetPvpTalentSlotInfo(1);
+    if (slotInfo) then
+      local pvpSpecTalents = slotInfo.availableTalentIDs
+      for i, talentId in ipairs(pvpSpecTalents) do
+          local _, _, _, _, _ , spellId = GetPvpTalentInfoByID(talentId)
+          if not specDB.SpellsWithPvpTalent[spellId] then
+            PRINT("pvptalent: "..GetSpellInfo(spellId))
+            specDB.SpellsWithPvpTalent[spellId] = i
+          end
+      end
+    end
+  end)
+end
 
 local bannedAuras = {
   [335149] = true, -- wotlk xp event
@@ -341,6 +374,7 @@ local bannedAuras = {
   [411256] = true, -- winds of sanctuary
   [335152] = true, -- sign of iron
   [353263] = true, -- mount
+  [60025] = true, -- mount
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
@@ -484,6 +518,7 @@ local bannedCds = {
 }
 
 function export()
+  DevTool:AddData(specDB, "specDB")
 
   local buffs =
   "    [1] = {\n" ..
@@ -507,10 +542,14 @@ function export()
   "      icon = 458972\n" ..
   "    },\n"
 
-  local pvpBuffs = formatBuffsPvp(specDB.playerBuffs, "buff", "player")
-  pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.targetBuffs, "buff", "target")
-  pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.petBuffs, "buff", "pet")
-  pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.targetDebuffs, "debuff", "target")
+  local pvpBuffs = ""
+  if not isCata then
+    pvpBuffs = formatBuffsPvp(specDB.playerBuffs, "buff", "player")
+    pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.targetBuffs, "buff", "target")
+    pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.petBuffs, "buff", "pet")
+    pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.targetDebuffs, "debuff", "target")
+  end
+
 
   -- CDS
   local sortedCds = {};
@@ -567,7 +606,7 @@ function export()
     if specDB.petBuffs[spellId] then
       parameters = parameters .. ", buff = true, unit = 'pet'"
     end
-    if specDB.targetBuffs[spellId] then
+    if specDB.targetDebuffs[spellId] then
       parameters = parameters .. ", debuff = true"
     end
     if specDB.spellsWithGlowOverlay[spellId] then
@@ -599,4 +638,49 @@ function export()
 
   editBox:SetText(buffs .. debuffs .. pre_cooldowns .. cooldowns .. post_cooldowns .. pre_pvpTalents .. pvpBuffs .. pvpTalents .. post_pvpTalents);
   frame:Show();
+end
+
+function fill()
+  local frames = {}
+  for i = 1, 12 do
+     table.insert(frames, _G["ActionButton"..i])
+  end
+  for i = 1, 12 do
+     table.insert(frames, _G["MultiBarBottomLeftButton"..i])
+  end
+  for i = 1, 12 do
+     table.insert(frames, _G["MultiBarBottomRightButton"..i])
+  end
+  for i = 1, 12 do
+     table.insert(frames, _G["MultiBarLeftButton"..i])
+  end
+  for i = 1, 12 do
+    table.insert(frames, _G["MultiBarRightButton"..i])
+  end
+
+  local function GetActionByFrame(frameID)
+    return frameID and frames[frameID] and _G[frames[frameID]] and _G[frames[frameID]].action
+  end
+
+  for _, frame in ipairs(frames) do
+    if frame.action then
+      PickupAction(frame.action)
+      ClearCursor()
+    end
+  end
+
+  local frameID = 1
+  for i = 2, GetNumSpellTabs() do
+     local offset, numSlots = select(3, GetSpellTabInfo(i))
+     for j = offset+1, offset+numSlots do
+        if not IsPassiveSpell(j, BOOKTYPE_SPELL) then
+          PickupSpellBookItem(j, BOOKTYPE_SPELL)
+          local actionSlot = frames[frameID] and frames[frameID].action
+          if actionSlot then
+            PlaceAction(actionSlot)
+            frameID = frameID + 1
+          end
+        end
+     end
+  end
 end

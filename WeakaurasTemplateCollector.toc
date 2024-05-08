@@ -3,4 +3,6 @@
 ## Dependencies: WeakAuras
 ## SavedVariables: TemplateCollectorDB
 ## IconTexture: Interface\Addons\WeakAurasTemplateCollector\media\icon.tga
+
+cataTalentInfo.lua
 main.lua
