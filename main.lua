@@ -10,6 +10,29 @@ edgeFile = [[Interface\Tooltips\UI-Tooltip-Border]], edgeSize = 16,
 insets = { left = 4, right = 3, top = 4, bottom = 3 }
 }
 
+local GetSpellInfo = GetSpellInfo or function(spellID)
+  if not spellID then
+    return nil;
+  end
+
+  local spellInfo = C_Spell.GetSpellInfo(spellID);
+  if spellInfo then
+    return spellInfo.name, nil, spellInfo.iconID, spellInfo.castTime, spellInfo.minRange, spellInfo.maxRange, spellInfo.spellID, spellInfo.originalIconID;
+  end
+end
+
+local GetSpellCharges = GetSpellCharges or function(id)
+  local chargeInfo = C_Spell.GetSpellCharges(id)
+  if not chargeInfo then return end
+  return chargeInfo.currentCharges, chargeInfo.maxCharges, chargeInfo.cooldownStartTime, chargeInfo.cooldownDuration, chargeInfo.chargeModRate
+end
+
+local BOOKTYPE_SPELL = "spell";
+
+local GetSpellBookItemName = GetSpellBookItemName or function(index, bookType)
+  local spellBank = (bookType == BOOKTYPE_SPELL) and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet;
+  return C_SpellBook.GetSpellBookItemName(index, spellBank);
+end
 
 local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
 frame:SetBackdrop(backdrop)
@@ -62,7 +85,9 @@ local function updateSpec()
     "spellsWithGlowOverlay",
     "spellsWithRequireTarget",
     "spellsWithTotem",
-    "spellsWithUsable"
+    "spellsWithUsable",
+    "spellNameIsHero",
+    "spellIDIsHero"
   }) do
     specDB[field] = specDB[field] or {}
   end
@@ -87,18 +112,30 @@ local function gatherTalent()
       local nodes = C_Traits.GetTreeNodes(treeId)
       for _, nodeId in ipairs(nodes) do
         local node = C_Traits.GetNodeInfo(configId, nodeId)
-        if node.ID ~= 0 then
+        if node and node.ID ~= 0 then
           for idx, talentId in ipairs(node.entryIDs) do
             local entryInfo = C_Traits.GetEntryInfo(configId, talentId)
-            local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
-            local spellId = definitionInfo.spellID
-            local spellName = GetSpellInfo(spellId)
-            if spellName then
-              if not specDB.spellIdToTalentId[spellId] then
-                PRINT("talent: "..GetSpellInfo(spellId))
+            if entryInfo and entryInfo.definitionID then
+              local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
+              local spellId = definitionInfo.spellID
+              if spellId then
+                local spellName = GetSpellInfo(spellId)
+                if spellName then
+                  if not specDB.spellIdToTalentId[spellId] then
+                    if node.subTreeID then
+                      PRINT("herotalent: ".. spellName)
+                    else
+                      PRINT("talent: ".. spellName)
+                    end
+                  end
+                  specDB.spellIdToTalentId[spellId] = talentId
+                  specDB.spellNameToTalentId[spellName] = talentId
+                  if node.subTreeID then
+                    specDB.spellNameIsHero[spellName] = true
+                    specDB.spellIDIsHero[spellId] = true
+                  end
+                end
               end
-              specDB.spellIdToTalentId[spellId] = talentId
-              specDB.spellNameToTalentId[spellName] = talentId
             end
           end
         end
@@ -621,7 +658,11 @@ function export()
     if specDB.spellsWithUsable[spellId] then
       parameters = parameters .. ", usable = true"
     end
-    if specDB.spellIdToTalentId[spellId] then
+    if specDB.spellIDIsHero[spellId] then
+      parameters = parameters .. (", herotalent = %s"):format(specDB.spellIdToTalentId[spellId])
+    elseif specDB.spellNameIsHero[spellName] then
+      parameters = parameters .. (", herotalent = %s"):format(specDB.spellNameToTalentId[spellName])
+    elseif specDB.spellIdToTalentId[spellId] then
       parameters = parameters .. (", talent = %s"):format(specDB.spellIdToTalentId[spellId])
     elseif specDB.spellNameToTalentId[spellName] then
       parameters = parameters .. (", talent = %d"):format(specDB.spellNameToTalentId[spellName])
