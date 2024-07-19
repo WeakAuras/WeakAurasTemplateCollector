@@ -34,11 +34,37 @@ local GetSpellCooldown = GetSpellCooldown or function(spellID)
   end
 end
 
-local BOOKTYPE_SPELL = "spell";
+local BOOKTYPE_SPELL = Enum.SpellBookSpellBank.Player or "spell"
+
+local GetNumSpellTabs = GetNumSpellTabs or C_SpellBook.GetNumSpellBookSkillLines
 
 local GetSpellBookItemName = GetSpellBookItemName or function(index, bookType)
   local spellBank = (bookType == BOOKTYPE_SPELL) and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet;
   return C_SpellBook.GetSpellBookItemName(index, spellBank);
+end
+
+local IsPassiveSpell = IsPassiveSpell or C_SpellBook.IsSpellBookItemPassive
+local PickupSpellBookItem = PickupSpellBookItem or C_SpellBook.PickupSpellBookItem
+local GetSpellTabInfo = GetSpellTabInfo or function(index)
+  local skillLineInfo = C_SpellBook.GetSpellBookSkillLineInfo(index);
+  if skillLineInfo then
+    return skillLineInfo.name,
+        skillLineInfo.iconID,
+        skillLineInfo.itemIndexOffset,
+        skillLineInfo.numSpellBookItems,
+        skillLineInfo.isGuild,
+        skillLineInfo.offSpecID,
+        skillLineInfo.shouldHide,
+        skillLineInfo.specID;
+  end
+end
+local UnitAura = UnitAura or function(unitToken, index, filter)
+  local auraData = C_UnitAuras.GetAuraDataByIndex(unitToken, index, filter);
+  if not auraData then
+    return nil;
+  end
+
+  return AuraUtil.UnpackAuraData(auraData);
 end
 
 local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
@@ -722,16 +748,16 @@ function fill()
 
   local frameID = 1
   for i = 2, GetNumSpellTabs() do
-     local offset, numSlots = select(3, GetSpellTabInfo(i))
-     for j = offset+1, offset+numSlots do
-        if not IsPassiveSpell(j, BOOKTYPE_SPELL) then
-          PickupSpellBookItem(j, BOOKTYPE_SPELL)
-          local actionSlot = frames[frameID] and frames[frameID].action
-          if actionSlot then
-            PlaceAction(actionSlot)
-            frameID = frameID + 1
-          end
+    local offset, numSlots = select(3, GetSpellTabInfo(i))
+    for j = offset+1, offset+numSlots do
+      if not IsPassiveSpell(j, BOOKTYPE_SPELL) then
+        PickupSpellBookItem(j, BOOKTYPE_SPELL)
+        local actionSlot = frames[frameID] and frames[frameID].action
+        if actionSlot then
+          PlaceAction(actionSlot)
+          frameID = frameID + 1
         end
-     end
+      end
+    end
   end
 end
