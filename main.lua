@@ -27,6 +27,13 @@ local GetSpellCharges = GetSpellCharges or function(id)
   return chargeInfo.currentCharges, chargeInfo.maxCharges, chargeInfo.cooldownStartTime, chargeInfo.cooldownDuration, chargeInfo.chargeModRate
 end
 
+local GetSpellCooldown = GetSpellCooldown or function(spellID)
+  local spellCooldownInfo = C_Spell.GetSpellCooldown(spellID);
+  if spellCooldownInfo then
+    return spellCooldownInfo.startTime, spellCooldownInfo.duration, spellCooldownInfo.isEnabled, spellCooldownInfo.modRate;
+  end
+end
+
 local BOOKTYPE_SPELL = "spell";
 
 local GetSpellBookItemName = GetSpellBookItemName or function(index, bookType)
@@ -268,7 +275,10 @@ local function GetSpellCooldownUnified(id)
     local basecd = GetSpellBaseCooldown(id);
     local enabled;
     startTime, duration, enabled = GetSpellCooldown(id);
-    if (enabled == 0) then
+    if type(enabled) == "number" then
+      enabled = enabled == 1 and true or false
+    end
+    if not enabled then
       startTime, duration = 0, 0
     end
 
