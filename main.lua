@@ -40,9 +40,12 @@ local GetNumSpellTabs = GetNumSpellTabs or C_SpellBook.GetNumSpellBookSkillLines
 
 local GetSpellBookItemName = GetSpellBookItemName or function(index, bookType)
   local spellBank = (bookType == BOOKTYPE_SPELL) and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet;
-  return C_SpellBook.GetSpellBookItemName(index, spellBank);
+  local itemInfo = C_SpellBook.GetSpellBookItemInfo(index, spellBank);
+  if itemInfo then
+    return itemInfo.name, nil, itemInfo.spellID
+  end
 end
-
+local GetSpellCount = GetSpellCount or C_Spell.GetSpellCastCount
 local IsPassiveSpell = IsPassiveSpell or C_SpellBook.IsSpellBookItemPassive
 local PickupSpellBookItem = PickupSpellBookItem or C_SpellBook.PickupSpellBookItem
 local GetSpellTabInfo = GetSpellTabInfo or function(index)
@@ -485,14 +488,16 @@ frame:SetScript("OnUpdate",
     if not talentsInitialized then return end
     for spellTab = 1, GetNumSpellTabs() do
       local _, _, offset, numSpells, _, offspecID = GetSpellTabInfo(spellTab)
-      if (offspecID  == 0) then
+      if (offspecID  == 0 or offspecID == nil) then
         for i = (offset + 1), (offset + numSpells - 1) do
-          local name, _, spellId = GetSpellBookItemName(i, BOOKTYPE_SPELL)
-          if not name then
-            break;
-          end
-          if (spellId) then
-            checkForCd(spellId);
+          if not IsPassiveSpell(i, BOOKTYPE_SPELL) then
+            local name, _, spellId = GetSpellBookItemName(i, BOOKTYPE_SPELL)
+            if not name then
+              break;
+            end
+            if (spellId) then
+              checkForCd(spellId);
+            end
           end
         end
       end
