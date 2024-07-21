@@ -214,6 +214,14 @@ spelloverlay_frame:SetScript("OnEvent", function(self, event, spellId)
   specDB.spellsWithGlowOverlay[spellId] = true
 end)
 
+local IsSpellInRange = IsSpellInRange
+if not IsSpellInRange then
+  IsSpellInRange = function(...)
+    local r = C_Spell.IsSpellInRange(...)
+    return r and 1 or 0
+  end
+end
+
 local function checkTargetedSpells()
   for spellId in pairs(specDB.spellsWithCd) do
     local spellName = GetSpellInfo(spellId)
@@ -591,7 +599,9 @@ local bannedCds = {
 }
 
 function export()
-  DevTool:AddData(specDB, "specDB")
+  if DevTool and DevTool.AddData then
+    DevTool:AddData(specDB, "specDB")
+  end
 
   local buffs =
   "    [1] = {\n" ..
