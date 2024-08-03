@@ -238,13 +238,15 @@ local function checkTargetedSpells()
     end
   end
   for spellId in pairs(specDB.spellIdToTalentId) do
-    local spellName = GetSpellInfo(spellId)
-    if spellName then
-      if IsSpellInRange(spellName, "target") == 0 then
-        if not specDB.spellsWithRequireTarget[spellId] then
-          PRINT("requiresTarget: "..GetSpellInfo(spellId))
+    if not C_Spell.IsSpellPassive(spellId) then
+      local spellName = GetSpellInfo(spellId)
+      if spellName then
+        if IsSpellInRange(spellName, "target") == 0 then
+          if not specDB.spellsWithRequireTarget[spellId] then
+            PRINT("requiresTarget: "..GetSpellInfo(spellId))
+          end
+          specDB.spellsWithRequireTarget[spellId] = true
         end
-        specDB.spellsWithRequireTarget[spellId] = true
       end
     end
   end
@@ -254,6 +256,7 @@ local function checkTargetedSpells()
     and spellId
     and (IsPlayerSpell(spellId) or IsSpellKnown(spellId, true))
     and IsActionInRange(actionSlot) == false
+    and not C_Spell.IsSpellPassive(spellId)
     then
       if not specDB.spellsWithRequireTarget[spellId] then
         PRINT("requiresTarget: "..GetSpellInfo(spellId))
@@ -495,7 +498,7 @@ frame:SetScript("OnUpdate",
             if not name then
               break;
             end
-            if (spellId) then
+            if (spellId and not C_Spell.IsSpellPassive(spellId)) then
               checkForCd(spellId);
             end
           end
@@ -508,7 +511,7 @@ frame:SetScript("OnUpdate",
       if not name then
         break;
       end
-      if (spellId) then
+      if not IsPassiveSpell(i, BOOKTYPE_PET) and spellId then
         checkForCd(spellId);
       end
       i = i + 1
