@@ -144,6 +144,7 @@ local function gatherTalent()
     if configId == nil then return end
     local configInfo = C_Traits.GetConfigInfo(configId)
     if configInfo == nil then return end
+    local subTreeIDs = C_ClassTalents.GetHeroTalentSpecsForClassSpec()
     for _, treeId in ipairs(configInfo.treeIDs) do
       local nodes = C_Traits.GetTreeNodes(treeId)
       for _, nodeId in ipairs(nodes) do
@@ -166,7 +167,8 @@ local function gatherTalent()
                   end
                   specDB.spellIdToTalentId[spellId] = talentId
                   specDB.spellNameToTalentId[spellName] = talentId
-                  if node.subTreeID then
+                  local subTreeIndex = node.subTreeID and tIndexOf(subTreeIDs, node.subTreeID) or nil
+                  if subTreeIndex then
                     specDB.spellNameIsHero[spellName] = true
                     specDB.spellIDIsHero[spellId] = true
                   end
