@@ -223,7 +223,12 @@ local IsSpellInRange = IsSpellInRange
 if not IsSpellInRange then
   IsSpellInRange = function(...)
     local r = C_Spell.IsSpellInRange(...)
-    return r and 1 or 0
+    if r == true then
+      return 1
+    elseif r == false then
+      return 0
+    end
+    return nil
   end
 end
 
