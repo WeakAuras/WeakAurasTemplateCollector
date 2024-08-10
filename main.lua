@@ -470,6 +470,7 @@ local bannedAuras = {
   [335152] = true, -- sign of iron
   [353263] = true, -- mount
   [60025] = true, -- mount
+  [451367] = true, -- candle trinket proc
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
