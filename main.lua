@@ -35,6 +35,7 @@ local GetSpellCooldown = GetSpellCooldown or function(spellID)
 end
 
 local BOOKTYPE_SPELL = Enum.SpellBookSpellBank.Player or "spell"
+local BOOKTYPE_PET = Enum.SpellBookSpellBank.Pet or "pet"
 
 local GetNumSpellTabs = GetNumSpellTabs or C_SpellBook.GetNumSpellBookSkillLines
 
