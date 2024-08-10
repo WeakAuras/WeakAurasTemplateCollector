@@ -702,7 +702,7 @@ function export()
     if specDB.playerBuffs[spellId] then
       parameters = parameters .. ", buff = true"
     end
-    if specDB.petBuffs[spellId] then
+    if specDB.petBuffs[spellId] and not specDB.playerBuffs[spellId] then
       parameters = parameters .. ", buff = true, unit = 'pet'"
     end
     if specDB.targetDebuffs[spellId] then
