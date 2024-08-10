@@ -775,7 +775,7 @@ function fill()
   end
 
   local frameID = 1
-  for i = 2, GetNumSpellTabs() do
+  for i = 1, GetNumSpellTabs() do
     local offset, numSlots = select(3, GetSpellTabInfo(i))
     for j = offset+1, offset+numSlots do
       if not IsPassiveSpell(j, BOOKTYPE_SPELL) then
