@@ -617,6 +617,8 @@ local bannedCds = {
   [312370] = true, -- camp
   [382499] =  true, -- Anomaly Detection Mark I
   [382501] = true, -- Mechanism Bypass
+  [404184] = true, -- Ground Skimming
+  [377234] = true, -- Thrill of the Skies
 }
 
 function export()
