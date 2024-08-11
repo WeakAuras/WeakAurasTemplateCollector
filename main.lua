@@ -547,7 +547,10 @@ local function formatBuffs(input, type, unit)
   local output = "";
   local cacheSpellName = {}
   for _, spellId in pairs(sorted) do
-    if not specDB.SpellsWithPvpTalent[spellId] and not bannedAuras[spellId] then
+    if not specDB.SpellsWithPvpTalent[spellId]
+    and not bannedAuras[spellId]
+    and not (unit ~= "player" and specDB.playerBuffs[spellId])
+    then
       local withTalent = "";
       local spellName = GetSpellInfo(spellId)
       if specDB.spellIDIsHero[spellId] then
@@ -559,7 +562,6 @@ local function formatBuffs(input, type, unit)
       elseif specDB.spellNameToTalentId[spellName] then
         withTalent = (", talent = %d"):format(specDB.spellNameToTalentId[spellName])
       end
-      local spellName = GetSpellInfo(spellId)
       if not cacheSpellName[spellName] then
         output = output .. "        { spell = " .. spellId .. ", type = \"" .. type .. "\", unit = \"" .. unit .. "\"" .. withTalent  .. " }, -- " .. spellName .. "\n";
         cacheSpellName[spellName] = true
