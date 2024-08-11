@@ -471,6 +471,8 @@ local bannedAuras = {
   [353263] = true, -- mount
   [60025] = true, -- mount
   [451367] = true, -- candle trinket proc
+  [404184] = true, -- Ground Skimming
+  [377234] = true, -- Thrill of the Skies
 }
 local function checkForBuffs(unit, filter, output)
   local i = 1
@@ -617,8 +619,6 @@ local bannedCds = {
   [312370] = true, -- camp
   [382499] =  true, -- Anomaly Detection Mark I
   [382501] = true, -- Mechanism Bypass
-  [404184] = true, -- Ground Skimming
-  [377234] = true, -- Thrill of the Skies
 }
 
 function export()
