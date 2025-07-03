@@ -3,11 +3,12 @@ local _, addon = ...
 local CreateFrame, UnitIsUnit, tinsert, sort, GetSpellBookItemName, GetSpellTabInfo, GetNumSpellTabs, GetSpellInfo, UnitAura, GetSpellCooldown, GetSpellCharges, GetSpellBaseCooldown = CreateFrame, UnitIsUnit, tinsert, sort, GetSpellBookItemName, GetSpellTabInfo, GetNumSpellTabs, GetSpellInfo, UnitAura, GetSpellCooldown, GetSpellCharges, GetSpellBaseCooldown
 
 local isCata = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
+local isMop = WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC
 
 local backdrop = {
-bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
-edgeFile = [[Interface\Tooltips\UI-Tooltip-Border]], edgeSize = 16,
-insets = { left = 4, right = 3, top = 4, bottom = 3 }
+  bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
+  edgeFile = [[Interface\Tooltips\UI-Tooltip-Border]], edgeSize = 16,
+  insets = { left = 4, right = 3, top = 4, bottom = 3 }
 }
 
 local GetSpellInfo = GetSpellInfo or function(spellID)
@@ -34,8 +35,8 @@ local GetSpellCooldown = GetSpellCooldown or function(spellID)
   end
 end
 
-local BOOKTYPE_SPELL = Enum.SpellBookSpellBank.Player or "spell"
-local BOOKTYPE_PET = Enum.SpellBookSpellBank.Pet or "pet"
+local BOOKTYPE_SPELL = Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or "spell"
+local BOOKTYPE_PET = Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet or "pet"
 
 local GetNumSpellTabs = GetNumSpellTabs or C_SpellBook.GetNumSpellBookSkillLines
 
@@ -98,7 +99,7 @@ local talentsInitialized = false
 
 local function updateSpec()
   TemplateCollectorDB = TemplateCollectorDB or {}
-  if isCata then
+  if isCata or isMop then
     local _, class = UnitClass("player")
     TemplateCollectorDB[class] = TemplateCollectorDB[class] or {}
     specDB = TemplateCollectorDB[class]
@@ -140,7 +141,7 @@ end
 
 local function gatherTalent()
   print("gatherTalent")
-  if not isCata then
+  if not (isCata or isMop) then
     local configId = C_ClassTalents.GetActiveConfigID()
     if configId == nil then return end
     local configInfo = C_Traits.GetConfigInfo(configId)
@@ -180,9 +181,9 @@ local function gatherTalent()
         end
       end
     end
-  else
+  elseif isCata then
     local _, class = UnitClass("player")
-    local classData  = addon.cataTalentInfo[class]
+    local classData = isCata and addon.cataTalentInfo[class]
     if classData then
       for talentId, data in pairs(classData) do
         if data[4] then
@@ -190,6 +191,17 @@ local function gatherTalent()
           specDB.spellIdToTalentId[spellId] = talentId
           specDB.spellNameToTalentId[spellName] = talentId
         end
+      end
+    end
+  elseif isMop then
+    for index = 1, MAX_NUM_TALENTS do
+      local talentInfo = C_SpecializationInfo.GetTalentInfo({
+        tier = math.ceil(index / 3),
+        column = (index - 1) % 3 + 1
+      })
+      if talentInfo then
+        specDB.spellIdToTalentId[talentInfo.spellID] = index
+        specDB.spellNameToTalentId[talentInfo.name] = index
       end
     end
   end
@@ -200,7 +212,7 @@ spec_frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 spec_frame:RegisterEvent("TRAIT_CONFIG_CREATED")
 spec_frame:RegisterEvent("TRAIT_CONFIG_UPDATED")
 spec_frame:RegisterEvent("PLAYER_TALENT_UPDATE")
-if isCata then
+if isCata or isMop then
   spec_frame:RegisterEvent("CHARACTER_POINTS_CHANGED")
   spec_frame:RegisterEvent("PLAYER_TALENT_UPDATE");
   spec_frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
@@ -432,7 +444,7 @@ do
   end)
 end
 
-if not isCata then
+if not (isCata or isMop) then
   local pvpTalent_frame = CreateFrame("Frame")
   pvpTalent_frame:RegisterEvent("PLAYER_PVP_TALENT_UPDATE")
   pvpTalent_frame:SetScript("OnEvent", function()
@@ -621,7 +633,7 @@ local bannedCds = {
   [382501] = true, -- Mechanism Bypass
 }
 
-function export()
+local function export()
   if DevTool and DevTool.AddData then
     DevTool:AddData(specDB, "specDB")
   end
@@ -649,7 +661,7 @@ function export()
   "    },\n"
 
   local pvpBuffs = ""
-  if not isCata then
+  if not (isCata or isMop) then
     pvpBuffs = formatBuffsPvp(specDB.playerBuffs, "buff", "player")
     pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.targetBuffs, "buff", "target")
     pvpBuffs = pvpBuffs .. formatBuffsPvp(specDB.petBuffs, "buff", "pet")
@@ -750,7 +762,12 @@ function export()
   frame:Show();
 end
 
-function fill()
+local function fill()
+  if SetActionBarToggles and MultiActionBar_Update then
+    SetActionBarToggles(true, true, true, true, true)
+    MultiActionBar_Update()
+  end
+
   local frames = {}
   for i = 1, 12 do
      table.insert(frames, _G["ActionButton"..i])
@@ -794,3 +811,44 @@ function fill()
     end
   end
 end
+
+local fillButton = CreateFrame("Button", "1FillButton", frame, "UIPanelButtonTemplate")
+fillButton:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, 2)
+fillButton:SetWidth(100)
+fillButton:SetHeight(20)
+fillButton:SetText("Fill Action Bars")
+fillButton:SetScript("OnClick", function()
+  fill()
+end)
+
+local exportButton = CreateFrame("Button", "1ExportButton", frame, "UIPanelButtonTemplate")
+exportButton:SetPoint("LEFT", fillButton, "RIGHT")
+exportButton:SetWidth(100)
+exportButton:SetHeight(20)
+exportButton:SetText("Export")
+exportButton:SetScript("OnClick", function()
+  export()
+end)
+
+local resetButton = CreateFrame("Button", "1ResetButton", frame, "UIPanelButtonTemplate")
+resetButton:SetPoint("LEFT", exportButton, "RIGHT")
+resetButton:SetWidth(100)
+resetButton:SetHeight(20)
+resetButton:SetText("Reset")
+resetButton:SetScript("OnClick", function()
+  reset()
+end)
+
+local moveButton = CreateFrame("Button", "1MoveButton", frame, "UIPanelButtonTemplate")
+moveButton:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, -2)
+moveButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -23)
+moveButton:SetText("Move")
+
+moveButton:SetScript("OnMouseDown", function()
+    frame:SetMovable(true)
+    frame:StartMoving()
+end)
+moveButton:SetScript("OnMouseUp", function()
+    frame:SetMovable(false)
+    frame:StopMovingOrSizing()
+end)
