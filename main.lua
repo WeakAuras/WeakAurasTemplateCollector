@@ -403,6 +403,7 @@ do
   local skipIfSpellOnCooldown = {
     [109132] = true, -- monk's roll
     [358267] = true, -- evoker's hover
+    [46924] = true, -- bladestorm
     --[46924] = true, -- warrior bladestorm
    -- [205629] = true, -- dh demonic trample pvp talent
   }
@@ -412,13 +413,15 @@ do
   usable_frame:SetScript("OnEvent", function()
     local skip = false
     for spellId in pairs(skipIfSpellOnCooldown) do
-      local charges, maxCharges, startTime, duration = GetSpellCooldownUnified(spellId)
-      if startTime and startTime > 0 then
-        skip = true
-        if not isPaused then
-          PRINT("usable check paused until "..GetSpellInfo(spellId).." is ready")
-          isPaused = true
-          return
+      if IsPlayerSpell(spellId) or IsSpellKnown(spellId, true) then
+        local charges, maxCharges, startTime, duration = GetSpellCooldownUnified(spellId)
+        if startTime and startTime > 0 then
+          skip = true
+          if not isPaused then
+            PRINT("usable check paused until "..GetSpellInfo(spellId).." is ready")
+            isPaused = true
+            return
+          end
         end
       end
     end
